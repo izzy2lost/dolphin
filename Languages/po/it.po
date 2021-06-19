@@ -3068,7 +3068,7 @@ msgid ""
 "Dolphin will use this for titles whose region cannot be determined "
 "automatically."
 msgstr ""
-"Dolhin userà questa impostazione per i titoli di cui non potrà riconoscere "
+"Dolphin userà questa impostazione per i titoli di cui non potrà riconoscere "
 "automaticamente la regione."
 
 #: Source/Core/DolphinQt/Config/CheatWarningWidget.cpp:74
