@@ -356,12 +356,6 @@ JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_utils_DirectoryInitializat
   File::SetSysDirectory(path);
 }
 
-JNIEXPORT void JNICALL
-Java_org_dolphinemu_dolphinemu_utils_DirectoryInitialization_CreateUserDirectories(JNIEnv*, jclass)
-{
-  UICommon::CreateDirectories();
-}
-
 JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_SetUserDirectory(
     JNIEnv* env, jclass, jstring jDirectory)
 {
@@ -511,6 +505,7 @@ Java_org_dolphinemu_dolphinemu_NativeLibrary_UpdateGCAdapterScanThread(JNIEnv*, 
 
 JNIEXPORT void JNICALL Java_org_dolphinemu_dolphinemu_NativeLibrary_Initialize(JNIEnv*, jclass)
 {
+  UICommon::CreateDirectories();
   Common::RegisterMsgAlertHandler(&MsgAlert);
   Common::AndroidSetReportHandler(&ReportSend);
   DolphinAnalytics::AndroidSetGetValFunc(&GetAnalyticValue);
