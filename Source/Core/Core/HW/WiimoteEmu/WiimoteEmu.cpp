@@ -655,6 +655,24 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
 {
   EmulatedController::LoadDefaults(ciface);
 
+#ifdef ANDROID
+  // Rumble
+  m_rumble->SetControlExpression(0, "`Android/0/Device Sensors:Motor 0`");
+
+  // Motion Source
+  m_imu_accelerometer->SetControlExpression(0, "`Android/0/Device Sensors:Accel Up`");
+  m_imu_accelerometer->SetControlExpression(1, "`Android/0/Device Sensors:Accel Down`");
+  m_imu_accelerometer->SetControlExpression(2, "`Android/0/Device Sensors:Accel Left`");
+  m_imu_accelerometer->SetControlExpression(3, "`Android/0/Device Sensors:Accel Right`");
+  m_imu_accelerometer->SetControlExpression(4, "`Android/0/Device Sensors:Accel Forward`");
+  m_imu_accelerometer->SetControlExpression(5, "`Android/0/Device Sensors:Accel Backward`");
+  m_imu_gyroscope->SetControlExpression(0, "`Android/0/Device Sensors:Gyro Pitch Up`");
+  m_imu_gyroscope->SetControlExpression(1, "`Android/0/Device Sensors:Gyro Pitch Down`");
+  m_imu_gyroscope->SetControlExpression(2, "`Android/0/Device Sensors:Gyro Roll Left`");
+  m_imu_gyroscope->SetControlExpression(3, "`Android/0/Device Sensors:Gyro Roll Right`");
+  m_imu_gyroscope->SetControlExpression(4, "`Android/0/Device Sensors:Gyro Yaw Left`");
+  m_imu_gyroscope->SetControlExpression(5, "`Android/0/Device Sensors:Gyro Yaw Right`");
+#else
 // Buttons
 #if defined HAVE_X11 && HAVE_X11
   // A
@@ -755,6 +773,7 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
   m_imu_gyroscope->SetControlExpression(3, "`Gyro Roll Right`");
   m_imu_gyroscope->SetControlExpression(4, "`Gyro Yaw Left`");
   m_imu_gyroscope->SetControlExpression(5, "`Gyro Yaw Right`");
+#endif
 
 #if _UWP
   m_rumble->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Rumble 0`");

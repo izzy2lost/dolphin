@@ -170,6 +170,10 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
 {
   EmulatedController::LoadDefaults(ciface);
 
+#ifdef ANDROID
+  // Rumble
+  m_rumble->SetControlExpression(0, "`Android/0/Device Sensors:Motor 0`");
+#else
   // Buttons
 #if _UWP
   // If we're running on UWP, we're likely on an Xbox. These defaults work for Xbox One & Series.

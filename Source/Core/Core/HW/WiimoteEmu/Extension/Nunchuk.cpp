@@ -198,7 +198,7 @@ void Nunchuk::DoState(PointerWrap& p)
 
 void Nunchuk::LoadDefaults(const ControllerInterface& ciface)
 {
-#if _UWP
+#if _UWP && !ANDROID
   // Stick
   m_stick->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Left Y+`");  // up
   m_stick->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Left Y-`");  // down
@@ -238,5 +238,6 @@ void Nunchuk::LoadDefaults(const ControllerInterface& ciface)
     m_shake->SetControlExpression(i, "`Click 2`");
 #endif
   }
+#endif
 }
 }  // namespace WiimoteEmu
