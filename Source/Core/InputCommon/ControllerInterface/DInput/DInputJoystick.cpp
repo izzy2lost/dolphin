@@ -63,8 +63,10 @@ void InitJoystick(IDirectInput8* const idi8, HWND hwnd)
     {
       if (SUCCEEDED(js_device->SetDataFormat(&c_dfDIJoystick)))
       {
-        HRESULT hr = js_device->SetCooperativeLevel(GetAncestor(hwnd, GA_ROOT),
-                                                    DISCL_BACKGROUND | DISCL_EXCLUSIVE);
+        //HRESULT hr = js_device->SetCooperativeLevel(GetAncestor(hwnd, GA_ROOT),
+        //                                            DISCL_BACKGROUND | DISCL_EXCLUSIVE);
+        HRESULT hr = js_device->SetCooperativeLevel(nullptr, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE); // UWP - fall back to non-exclusive for now
+
         if (FAILED(hr))
         {
           WARN_LOG_FMT(CONTROLLERINTERFACE,

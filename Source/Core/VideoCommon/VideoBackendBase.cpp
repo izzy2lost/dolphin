@@ -223,12 +223,14 @@ const std::vector<std::unique_ptr<VideoBackendBase>>& VideoBackendBase::GetAvail
 
     // OGL > D3D11 > D3D12 > Vulkan > SW > Null
     // On macOS, we prefer Vulkan over OpenGL due to OpenGL support being deprecated by Apple.
-#ifdef HAS_OPENGL
-    backends.push_back(std::make_unique<OGL::VideoBackend>());
-#endif
+
+    // UWP - We bump D3D11 to the top for now 
 #ifdef _WIN32
     backends.push_back(std::make_unique<DX11::VideoBackend>());
     backends.push_back(std::make_unique<DX12::VideoBackend>());
+#endif
+#ifdef HAS_OPENGL
+    backends.push_back(std::make_unique<OGL::VideoBackend>());
 #endif
 #ifdef __APPLE__
     backends.push_back(std::make_unique<Metal::VideoBackend>());

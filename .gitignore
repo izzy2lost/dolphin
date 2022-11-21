@@ -39,3 +39,7 @@ CMakeLists.txt.user
 /.idea/
 # Ignore Visual Studio Code's working dir
 /.vscode/
+/Source/x64/Release/DolphinUWP
+/Source/packages/Microsoft.Windows.CppWinRT.2.0.220110.5
+/Source/Core/DolphinUWP/x64/Release
+/Source/Core/DolphinUWP/Generated Files/winrt

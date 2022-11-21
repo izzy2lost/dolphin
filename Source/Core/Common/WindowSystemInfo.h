@@ -13,6 +13,7 @@ enum class WindowSystemType
   Wayland,
   FBDev,
   Haiku,
+  UWP
 };
 
 struct WindowSystemInfo
@@ -43,4 +44,6 @@ struct WindowSystemInfo
 
   // Scale of the render surface. For hidpi systems, this will be >1.
   float render_surface_scale = 1.0f;
+  uint32_t render_width = 0;
+  uint32_t render_height = 0;
 };

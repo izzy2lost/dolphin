@@ -207,7 +207,7 @@ void KeyboardMouse::UpdateCursorInput()
 
 void KeyboardMouse::UpdateInput()
 {
-  UpdateCursorInput();
+  //UpdateCursorInput(); - temp fix for UWP
 
   DIMOUSESTATE2 tmp_mouse;
 

@@ -82,9 +82,10 @@ void ciface::Win32::PopulateDevices(void* hwnd)
 
 void ciface::Win32::ChangeWindow(void* hwnd)
 {
-  s_hwnd = static_cast<HWND>(hwnd);
-  std::lock_guard lk_population(s_populate_mutex);
-  ciface::DInput::ChangeWindow(s_hwnd);
+  // todo - allow for non-uwp platforms
+  //s_hwnd = static_cast<HWND>(hwnd);
+  //std::lock_guard lk_population(s_populate_mutex);
+  //ciface::DInput::ChangeWindow(s_hwnd);
 }
 
 void ciface::Win32::DeInit()
