@@ -7,6 +7,7 @@
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.UI.Input.h>
 #include <winrt/Windows.Storage.h>
+#include <winrt/Windows.Storage.Pickers.h>
 
 #include <Common/WindowSystemInfo.h>
 #include <Core/BootManager.h>
@@ -26,6 +27,9 @@ using namespace Windows::Foundation::Numerics;
 using namespace Windows::UI;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
+using namespace winrt::Windows::Storage;
+using namespace winrt::Windows::Storage::Pickers;
+
 
 Common::Flag m_running{true};
 Common::Flag m_shutdown_requested{false};
@@ -55,135 +59,80 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         CoreWindow window = CoreWindow::GetForCurrentThread();
         window.Activate();
 
-        CoreDispatcher dispatcher = window.Dispatcher();
-        //dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessUntilQuit);
-
         while (m_running.IsSet())
         {
-          dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+          window.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
           ::Core::HostDispatchJobs();
-
-          // TODO: Is this sleep appropriate?
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
 
     void SetWindow(CoreWindow const & w)
     {
-        void* window = winrt::get_abi(CoreWindow::GetForCurrentThread());
-
-        WindowSystemInfo wsi;
-        wsi.type = WindowSystemType::UWP;
-        wsi.render_window = window;
-        wsi.render_surface = window;
-        wsi.render_height = w.Bounds().Height;
-        wsi.render_width = w.Bounds().Width;
-
-        std::unique_ptr<BootParameters> boot =
-          BootParameters::GenerateFromFile("E:/game.iso",
-                                             BootSessionData("", DeleteSavestateAfterBoot::No));
-
-        UICommon::SetUserDirectory(
-            winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
-        UICommon::Init();
-        UICommon::InitControllers(wsi);
-
-        if (!BootManager::BootCore(std::move(boot), wsi))
-        {
-           fprintf(stderr, "Could not boot the specified file\n");
-           return;
-        }
+        InitializeDolphin(w.Bounds().Width, w.Bounds().Height);
     }
 
-    void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
+    winrt::fire_and_forget InitializeDolphin(float window_width, float window_height)
     {
-        /*float2 const point = args.CurrentPoint().Position();
+        FileOpenPicker openPicker;
+        openPicker.ViewMode(PickerViewMode::List);
+        openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
+        openPicker.FileTypeFilter().Append(L".iso");
+        openPicker.FileTypeFilter().Append(L".ciso");
+        openPicker.FileTypeFilter().Append(L".rvz");
+        openPicker.FileTypeFilter().Append(L".wbfs");
+        openPicker.FileTypeFilter().Append(L".gcm");
+        openPicker.FileTypeFilter().Append(L".gcz");
 
-        for (Visual visual : m_visuals)
+        auto file = co_await openPicker.PickSingleFileAsync();
+        if (file)
         {
-            float3 const offset = visual.Offset();
-            float2 const size = visual.Size();
+            // - we can copy the game to use a file from anywhere, but that isn't great for huge games
+            void* window = winrt::get_abi(CoreWindow::GetForCurrentThread());
 
-            if (point.x >= offset.x &&
-                point.x < offset.x + size.x &&
-                point.y >= offset.y &&
-                point.y < offset.y + size.y)
+            WindowSystemInfo wsi;
+            wsi.type = WindowSystemType::UWP;
+            wsi.render_window = window;
+            wsi.render_surface = window;
+            wsi.render_height = window_height;
+            wsi.render_width = window_width;
+
+            std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(
+                winrt::to_string(file.Path().data()), BootSessionData("", DeleteSavestateAfterBoot::No));
+
+            UICommon::SetUserDirectory(
+                winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
+            UICommon::Init();
+            UICommon::InitControllers(wsi);
+
+            if (!BootManager::BootCore(std::move(boot), wsi))
             {
-                m_selected = visual;
-                m_offset.x = offset.x - point.x;
-                m_offset.y = offset.y - point.y;
+                fprintf(stderr, "Could not boot the specified file\n");
+                DeleteFile(file.Path().data());
             }
         }
-
-        if (m_selected)
-        {
-            m_visuals.Remove(m_selected);
-            m_visuals.InsertAtTop(m_selected);
-        }
-        else
-        {
-            AddVisual(point);
-        }*/
     }
 
-    void OnPointerMoved(IInspectable const &, PointerEventArgs const & args)
-    {
-        //if (m_selected)
-        //{
-        //    float2 const point = args.CurrentPoint().Position();
+    void OnPointerPressed(IInspectable const &, PointerEventArgs const & args) { }
 
-        //    m_selected.Offset(
-        //    {
-        //        point.x + m_offset.x,
-        //        point.y + m_offset.y,
-        //        0.0f
-        //    });
-        //}
-    }
-
-    void AddVisual(float2 const point)
-    {
-        //Compositor compositor = m_visuals.Compositor();
-        //SpriteVisual visual = compositor.CreateSpriteVisual();
-
-        //static Color colors[] =
-        //{
-        //    { 0xDC, 0x5B, 0x9B, 0xD5 },
-        //    { 0xDC, 0xED, 0x7D, 0x31 },
-        //    { 0xDC, 0x70, 0xAD, 0x47 },
-        //    { 0xDC, 0xFF, 0xC0, 0x00 }
-        //};
-
-        //static unsigned last = 0;
-        //unsigned const next = ++last % _countof(colors);
-        //visual.Brush(compositor.CreateColorBrush(colors[next]));
-
-        //float const BlockSize = 100.0f;
-
-        //visual.Size(
-        //{
-        //    BlockSize,
-        //    BlockSize
-        //});
-
-        //visual.Offset(
-        //{
-        //    point.x - BlockSize / 2.0f,
-        //    point.y - BlockSize / 2.0f,
-        //    0.0f,
-        //});
-
-        //m_visuals.InsertAtTop(visual);
-
-        //m_selected = visual;
-        //m_offset.x = -BlockSize / 2.0f;
-        //m_offset.y = -BlockSize / 2.0f;
-    }
+    void OnPointerMoved(IInspectable const &, PointerEventArgs const & args) { }
 };
 
-int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
+int WINAPIV WinMain()
 {
+    winrt::init_apartment();
+
+    SetThreadAffinityMask(GetCurrentThread(), 0x1);
     CoreApplication::Run(make<App>());
+
+    winrt::uninit_apartment();
+
+    return 0;
+}
+
+void ExitSample() noexcept
+{
+    winrt::Windows::ApplicationModel::Core::CoreApplication::Exit();
 }
 
 void UpdateRunningFlag()

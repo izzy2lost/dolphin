@@ -25,7 +25,7 @@
 namespace Common::Log
 {
 const Config::Info<bool> LOGGER_WRITE_TO_FILE{{Config::System::Logger, "Options", "WriteToFile"},
-                                              false};
+                                              true};
 const Config::Info<bool> LOGGER_WRITE_TO_CONSOLE{
     {Config::System::Logger, "Options", "WriteToConsole"}, true};
 const Config::Info<bool> LOGGER_WRITE_TO_WINDOW{
