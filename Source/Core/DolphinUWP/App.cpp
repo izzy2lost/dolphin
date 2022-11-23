@@ -9,6 +9,8 @@
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Pickers.h>
 
+#include <Gamingdeviceinformation.h>
+
 #include <Common/WindowSystemInfo.h>
 #include <Core/BootManager.h>
 #include <UICommon/UICommon.h>
@@ -24,12 +26,13 @@ using namespace Windows;
 using namespace Windows::Storage;
 using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation::Numerics;
-using namespace Windows::UI;
-using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
 using namespace winrt::Windows::Storage;
 using namespace winrt::Windows::Storage::Pickers;
 
+using winrt::Windows::UI::Core::CoreWindow;
+using winrt::Windows::UI::Core::CoreProcessEventsOption;
+using winrt::Windows::UI::Core::BackRequestedEventArgs;
 
 Common::Flag m_running{true};
 Common::Flag m_shutdown_requested{false};
@@ -61,61 +64,83 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         while (m_running.IsSet())
         {
-          window.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+          if (m_shutdown_requested.TestAndClear())
+          {
+            const auto ios = IOS::HLE::GetIOS();
+            const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
+            if (!m_tried_graceful_shutdown.IsSet() && stm &&
+                std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
+            {
+              ProcessorInterface::PowerButton_Tap();
+              m_tried_graceful_shutdown.Set();
+            }
+            else
+            {
+              m_running.Clear();
+            }
+          }
+
           ::Core::HostDispatchJobs();
+          window.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+
           std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
-    }
+    } 
 
     void SetWindow(CoreWindow const & w)
     {
-        InitializeDolphin(w.Bounds().Width, w.Bounds().Height);
-    }
+        void* window = winrt::get_abi(CoreWindow::GetForCurrentThread());
 
-    winrt::fire_and_forget InitializeDolphin(float window_width, float window_height)
-    {
-        FileOpenPicker openPicker;
-        openPicker.ViewMode(PickerViewMode::List);
-        openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
-        openPicker.FileTypeFilter().Append(L".iso");
-        openPicker.FileTypeFilter().Append(L".ciso");
-        openPicker.FileTypeFilter().Append(L".rvz");
-        openPicker.FileTypeFilter().Append(L".wbfs");
-        openPicker.FileTypeFilter().Append(L".gcm");
-        openPicker.FileTypeFilter().Append(L".gcz");
+        WindowSystemInfo wsi;
+        wsi.type = WindowSystemType::UWP;
+        wsi.render_window = window;
+        wsi.render_surface = window;
+        wsi.render_width = w.Bounds().Width;
+        wsi.render_height = w.Bounds().Height;
 
-        auto file = co_await openPicker.PickSingleFileAsync();
-        if (file)
+        auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
+
+        // UWP on Xbox One triggers a back request whenever the B button is pressed
+        // which can result in the app being suspended if unhandled
+        navigation.BackRequested([](const winrt::Windows::Foundation::IInspectable&,
+                                    const BackRequestedEventArgs& args) { args.Handled(true); });
+
+        GAMING_DEVICE_MODEL_INFORMATION info = {};
+        GetGamingDeviceModelInformation(&info);
+        if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
         {
-            // - we can copy the game to use a file from anywhere, but that isn't great for huge games
-            void* window = winrt::get_abi(CoreWindow::GetForCurrentThread());
+          switch (info.deviceId)
+          {
+          case GAMING_DEVICE_DEVICE_ID_XBOX_ONE:
+          case GAMING_DEVICE_DEVICE_ID_XBOX_ONE_S:
+            wsi.render_width = 1920;
+            wsi.render_height = 1080;
+            break;
 
-            WindowSystemInfo wsi;
-            wsi.type = WindowSystemType::UWP;
-            wsi.render_window = window;
-            wsi.render_surface = window;
-            wsi.render_height = window_height;
-            wsi.render_width = window_width;
+          case GAMING_DEVICE_DEVICE_ID_XBOX_ONE_X:
+          case GAMING_DEVICE_DEVICE_ID_XBOX_ONE_X_DEVKIT:
+          default:  // Forward compatibility
+            wsi.render_width = 3840;
+            wsi.render_height = 2160;
+            break;
+          }
+        }
 
-            std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(
-                winrt::to_string(file.Path().data()), BootSessionData("", DeleteSavestateAfterBoot::No));
+        std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(
+            //winrt::to_string(ApplicationData::Current().LocalFolder().Path()) + "/game.iso",
+            "Assets/ac.ciso",
+                                             BootSessionData("", DeleteSavestateAfterBoot::No));
 
-            UICommon::SetUserDirectory(
-                winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
-            UICommon::Init();
-            UICommon::InitControllers(wsi);
+        UICommon::SetUserDirectory(
+            winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
+        UICommon::Init();
+        UICommon::InitControllers(wsi);
 
-            if (!BootManager::BootCore(std::move(boot), wsi))
-            {
-                fprintf(stderr, "Could not boot the specified file\n");
-                DeleteFile(file.Path().data());
-            }
+        if (!BootManager::BootCore(std::move(boot), wsi))
+        {
+          fprintf(stderr, "Could not boot the specified file\n");
         }
     }
-
-    void OnPointerPressed(IInspectable const &, PointerEventArgs const & args) { }
-
-    void OnPointerMoved(IInspectable const &, PointerEventArgs const & args) { }
 };
 
 int WINAPIV WinMain()
@@ -206,7 +231,7 @@ bool Host_RendererHasFullFocus()
 
 bool Host_RendererIsFullscreen()
 {
-    return false;
+    return true;
 }
 
 void Host_YieldToUI()

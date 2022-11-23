@@ -28,7 +28,7 @@
 #include "VideoBackends/D3D12/VideoBackend.h"
 #endif
 #include "VideoBackends/Null/VideoBackend.h"
-#ifdef HAS_OPENGL
+#if defined(HAS_OPENGL) && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP))
 #include "VideoBackends/OGL/VideoBackend.h"
 #include "VideoBackends/Software/VideoBackend.h"
 #endif
@@ -229,8 +229,8 @@ const std::vector<std::unique_ptr<VideoBackendBase>>& VideoBackendBase::GetAvail
     backends.push_back(std::make_unique<DX11::VideoBackend>());
     backends.push_back(std::make_unique<DX12::VideoBackend>());
 #endif
-#ifdef HAS_OPENGL
-    backends.push_back(std::make_unique<OGL::VideoBackend>());
+#if defined(HAS_OPENGL) && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
+    backends.push_back(std::make_unique <OGL::VideoBackend>());
 #endif
 #ifdef __APPLE__
     backends.push_back(std::make_unique<Metal::VideoBackend>());
@@ -243,8 +243,8 @@ const std::vector<std::unique_ptr<VideoBackendBase>>& VideoBackendBase::GetAvail
     backends.push_back(std::make_unique<Vulkan::VideoBackend>());
 #endif
 #endif
-#ifdef HAS_OPENGL
-    backends.push_back(std::make_unique<SW::VideoSoftware>());
+#if defined(HAS_OPENGL) && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
+    backends.push_back(std::make_unique <SW::VideoSoftware>());
 #endif
     backends.push_back(std::make_unique<Null::VideoBackend>());
 

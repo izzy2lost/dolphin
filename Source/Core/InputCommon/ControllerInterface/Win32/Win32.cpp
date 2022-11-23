@@ -14,7 +14,11 @@
 
 #include "Common/Flag.h"
 #include "Common/Logging/Log.h"
+
+#if (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
 #include "InputCommon/ControllerInterface/DInput/DInput.h"
+#endif
+
 #include "InputCommon/ControllerInterface/WGInput/WGInput.h"
 #include "InputCommon/ControllerInterface/XInput/XInput.h"
 
@@ -44,7 +48,9 @@ _Pre_satisfies_(EventDataSize >= sizeof(CM_NOTIFY_EVENT_DATA)) static DWORD CALL
       // TODO: we could easily use the message passed alongside this event, which tells
       // whether a device was added or removed, to avoid removing old, still connected, devices
       g_controller_interface.PlatformPopulateDevices([] {
+#if (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
         ciface::DInput::PopulateDevices(s_hwnd);
+#endif
         ciface::XInput::PopulateDevices();
       });
     }
@@ -75,7 +81,9 @@ void ciface::Win32::PopulateDevices(void* hwnd)
   s_hwnd = static_cast<HWND>(hwnd);
   std::lock_guard lk_population(s_populate_mutex);
   s_first_populate_devices_asked.Set();
+#if (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
   ciface::DInput::PopulateDevices(s_hwnd);
+#endif
   ciface::XInput::PopulateDevices();
   ciface::WGInput::PopulateDevices();
 }
@@ -85,13 +93,17 @@ void ciface::Win32::ChangeWindow(void* hwnd)
   // todo - allow for non-uwp platforms
   //s_hwnd = static_cast<HWND>(hwnd);
   //std::lock_guard lk_population(s_populate_mutex);
+  //#if (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
   //ciface::DInput::ChangeWindow(s_hwnd);
+  //#endif
 }
 
 void ciface::Win32::DeInit()
 {
   s_first_populate_devices_asked.Clear();
+#if (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
   DInput::DeInit();
+#endif
   s_hwnd = nullptr;
 
   if (s_notify_handle)

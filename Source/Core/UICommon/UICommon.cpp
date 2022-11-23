@@ -159,7 +159,7 @@ void InitControllers(const WindowSystemInfo& wsi)
                                       "mappings intended for the default device may not work.");
   }
 
-  GCAdapter::Init();
+  //GCAdapter::Init(); - libusb borked on UWP
   Pad::Initialize();
   Pad::InitializeGBA();
   Keyboard::Initialize();
