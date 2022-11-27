@@ -199,7 +199,8 @@ InputBackend::InputBackend(ControllerInterface* controller_interface)
     {
       Common::ScopeGuard init_guard([this] { m_init_event.Set(); });
 
-      if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER) != 0)
+      SDL_SetMainReady(); // - For whatever reason, SDL doesn't identity the main func properly
+      if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
       {
         ERROR_LOG_FMT(CONTROLLERINTERFACE, "SDL failed to initialize");
         return;
@@ -244,7 +245,8 @@ InputBackend::InputBackend(ControllerInterface* controller_interface)
       if (!HandleEventAndContinue(e))
         return;
 
-#ifdef _WIN32
+#if defined(_WIN32) && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP))
+
       MSG msg;
       while (window_handle && PeekMessage(&msg, window_handle, 0, 0, PM_NOREMOVE))
       {

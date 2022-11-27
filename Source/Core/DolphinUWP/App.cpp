@@ -45,8 +45,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         return *this;
     }
 
-    void Initialize(CoreApplicationView const &)
+    void Initialize(CoreApplicationView const & v)
     {
+      v.Activated({this, &App::OnActivate});
     }
 
     void Load(hstring const&)
@@ -60,43 +61,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void Run()
     {
         CoreWindow window = CoreWindow::GetForCurrentThread();
-        window.Activate();
-
-        while (m_running.IsSet())
-        {
-          if (m_shutdown_requested.TestAndClear())
-          {
-            const auto ios = IOS::HLE::GetIOS();
-            const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
-            if (!m_tried_graceful_shutdown.IsSet() && stm &&
-                std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
-            {
-              ProcessorInterface::PowerButton_Tap();
-              m_tried_graceful_shutdown.Set();
-            }
-            else
-            {
-              m_running.Clear();
-            }
-          }
-
-          ::Core::HostDispatchJobs();
-          window.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
-
-          std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        }
-    } 
-
-    void SetWindow(CoreWindow const & w)
-    {
-        void* window = winrt::get_abi(CoreWindow::GetForCurrentThread());
+        void* abi = winrt::get_abi(window);
 
         WindowSystemInfo wsi;
         wsi.type = WindowSystemType::UWP;
-        wsi.render_window = window;
-        wsi.render_surface = window;
-        wsi.render_width = w.Bounds().Width;
-        wsi.render_height = w.Bounds().Height;
+        wsi.render_window = abi;
+        wsi.render_surface = abi;
+        wsi.render_width = window.Bounds().Width;
+        wsi.render_height = window.Bounds().Height;
 
         auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
 
@@ -127,12 +99,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
 
         std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(
-            //winrt::to_string(ApplicationData::Current().LocalFolder().Path()) + "/game.iso",
-            "Assets/ac.ciso",
-                                             BootSessionData("", DeleteSavestateAfterBoot::No));
+             winrt::to_string(ApplicationData::Current().LocalFolder().Path()) + "/game.iso",
+              //"Assets/ac.ciso",
+              BootSessionData("", DeleteSavestateAfterBoot::No));
 
-        UICommon::SetUserDirectory(
-            winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
+        UICommon::SetUserDirectory(winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
         UICommon::Init();
         UICommon::InitControllers(wsi);
 
@@ -140,6 +111,43 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         {
           fprintf(stderr, "Could not boot the specified file\n");
         }
+
+        while (m_running.IsSet())
+        {
+          if (m_shutdown_requested.TestAndClear())
+          {
+            const auto ios = IOS::HLE::GetIOS();
+            const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
+            if (!m_tried_graceful_shutdown.IsSet() && stm &&
+                std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
+            {
+              ProcessorInterface::PowerButton_Tap();
+              m_tried_graceful_shutdown.Set();
+            }
+            else
+            {
+              m_running.Clear();
+            }
+          }
+
+          ::Core::HostDispatchJobs();
+          window.Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    } 
+
+    void SetWindow(CoreWindow const & w)
+    {
+        
+    }
+
+    void OnActivate(const winrt::Windows::ApplicationModel::Core::CoreApplicationView&,
+                    const winrt::Windows::ApplicationModel::Activation::IActivatedEventArgs& args)
+    {
+
+        CoreWindow window = CoreWindow::GetForCurrentThread();
+        window.Activate();
     }
 };
 

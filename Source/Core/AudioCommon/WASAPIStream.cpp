@@ -228,8 +228,9 @@ bool WASAPIStream::SetRunning(bool running)
     if (!HandleWinAPI("Failed to obtain device period", result))
       return false;
 
+    // Exclusive isn't allowed on xbox - UWP
     result = audio_client->Initialize(
-        AUDCLNT_SHAREMODE_EXCLUSIVE,
+        AUDCLNT_SHAREMODE_SHARED,
         AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST, device_period,
         device_period, reinterpret_cast<WAVEFORMATEX*>(&m_format), nullptr);
 
@@ -261,7 +262,7 @@ bool WASAPIStream::SetRunning(bool running)
           Config::Get(Config::MAIN_AUDIO_LATENCY) * 10000;
 
       result = audio_client->Initialize(
-          AUDCLNT_SHAREMODE_EXCLUSIVE,
+          AUDCLNT_SHAREMODE_SHARED,
           AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_NOPERSIST, device_period,
           device_period, reinterpret_cast<WAVEFORMATEX*>(&m_format), nullptr);
     }
