@@ -668,17 +668,17 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
   m_buttons->SetControlExpression(1, "`Right Click`");
 #else
   // A
-  m_buttons->SetControlExpression(0, "`Click 0`");
+  m_buttons->SetControlExpression(0, "`Button A`");
   // B
-  m_buttons->SetControlExpression(1, "`Click 1`");
+  m_buttons->SetControlExpression(1, "`Button B`");
 #endif
-  m_buttons->SetControlExpression(2, "`1`");  // 1
-  m_buttons->SetControlExpression(3, "`2`");  // 2
-  m_buttons->SetControlExpression(4, "Q");    // -
-  m_buttons->SetControlExpression(5, "E");    // +
+  m_buttons->SetControlExpression(2, "`Button X`");  // 1
+  m_buttons->SetControlExpression(3, "`Button Y`");  // 2
+  m_buttons->SetControlExpression(4, "View");    // -
+  m_buttons->SetControlExpression(5, "Menu");    // +
 
 #ifdef _WIN32
-  m_buttons->SetControlExpression(6, "RETURN");  // Home
+  m_buttons->SetControlExpression(6, "Menu & View");  // Home
 #else
   // Home
   m_buttons->SetControlExpression(6, "Return");
@@ -693,17 +693,17 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
 #endif
 
   // Pointing (IR)
-  m_ir->SetControlExpression(0, "`Cursor Y-`");
-  m_ir->SetControlExpression(1, "`Cursor Y+`");
-  m_ir->SetControlExpression(2, "`Cursor X-`");
-  m_ir->SetControlExpression(3, "`Cursor X+`");
+  m_ir->SetControlExpression(0, "`Right Y+`");
+  m_ir->SetControlExpression(1, "`Right Y-`");
+  m_ir->SetControlExpression(2, "`Right X-`");
+  m_ir->SetControlExpression(3, "`Right X+`");
 
 // DPad
 #ifdef _WIN32
-  m_dpad->SetControlExpression(0, "UP");     // Up
-  m_dpad->SetControlExpression(1, "DOWN");   // Down
-  m_dpad->SetControlExpression(2, "LEFT");   // Left
-  m_dpad->SetControlExpression(3, "RIGHT");  // Right
+  m_dpad->SetControlExpression(0, "Pad N"); // Up
+  m_dpad->SetControlExpression(1, "Pad S"); // Down
+  m_dpad->SetControlExpression(2, "Pad W"); // Left
+  m_dpad->SetControlExpression(3, "Pad E"); // Right
 #elif __APPLE__
   m_dpad->SetControlExpression(0, "`Up Arrow`");     // Up
   m_dpad->SetControlExpression(1, "`Down Arrow`");   // Down

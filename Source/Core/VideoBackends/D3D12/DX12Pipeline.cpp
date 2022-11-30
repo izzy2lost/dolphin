@@ -224,6 +224,8 @@ std::unique_ptr<DXPipeline> DXPipeline::Create(const AbstractPipelineConfig& con
 
 AbstractPipeline::CacheData DXPipeline::GetCacheData() const
 {
+  // For some reason the Xbox D3D12 graphics drivers don't support PSO caching?
+#if !defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP)
   ComPtr<ID3DBlob> blob;
   HRESULT hr = m_pipeline->GetCachedBlob(&blob);
   if (FAILED(hr))
@@ -235,5 +237,8 @@ AbstractPipeline::CacheData DXPipeline::GetCacheData() const
   CacheData data(blob->GetBufferSize());
   std::memcpy(data.data(), blob->GetBufferPointer(), blob->GetBufferSize());
   return data;
+#else
+  return {};
+#endif
 }
 }  // namespace DX12

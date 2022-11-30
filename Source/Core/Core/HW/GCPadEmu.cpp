@@ -175,9 +175,9 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
   m_buttons->SetControlExpression(1, "`Button B`");  // B
   m_buttons->SetControlExpression(2, "`Button X`");  // X
   m_buttons->SetControlExpression(3, "`Button Y`");  // Y
-  m_buttons->SetControlExpression(4, "`Button 5`");  // Z
+  m_buttons->SetControlExpression(4, "`Bumper R`");  // Z
 #ifdef _WIN32
-  m_buttons->SetControlExpression(5, "`Button 7`");  // Start
+  m_buttons->SetControlExpression(5, "`Menu`");  // Start
 #else
   // OS X/Linux
   // Start
@@ -185,25 +185,25 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
 #endif
 
   // D-Pad
-  m_dpad->SetControlExpression(0, "`Hat 0 N`");  // Up
-  m_dpad->SetControlExpression(1, "`Hat 0 S`");  // Down
-  m_dpad->SetControlExpression(2, "`Hat 0 W`");  // Left
-  m_dpad->SetControlExpression(3, "`Hat 0 E`");  // Right
+  m_dpad->SetControlExpression(0, "`Pad N`");  // Up
+  m_dpad->SetControlExpression(1, "`Pad S`");  // Down
+  m_dpad->SetControlExpression(2, "`Pad W`");  // Left
+  m_dpad->SetControlExpression(3, "`Pad E`");  // Right
 
   // C Stick
-  m_c_stick->SetControlExpression(0, "`Axis 3-`");  // Up
-  m_c_stick->SetControlExpression(1, "`Axis 3+`");  // Down
-  m_c_stick->SetControlExpression(2, "`Axis 2-`");  // Left
-  m_c_stick->SetControlExpression(3, "`Axis 2+`");  // Right
+  m_c_stick->SetControlExpression(0, "`Right Y+`");  // Up
+  m_c_stick->SetControlExpression(1, "`Right Y-`");  // Down
+  m_c_stick->SetControlExpression(2, "`Right X-`");  // Left
+  m_c_stick->SetControlExpression(3, "`Right X+`");  // Right
   // Modifier
   m_c_stick->SetControlExpression(4, "`Ctrl`");
 
   // Control Stick
 #ifdef _WIN32
-  m_main_stick->SetControlExpression(0, "`Axis 1-`");     // Up
-  m_main_stick->SetControlExpression(1, "`Axis 1+`");   // Down
-  m_main_stick->SetControlExpression(2, "`Axis 0-`");   // Left
-  m_main_stick->SetControlExpression(3, "`Axis 0+`");  // Right
+  m_main_stick->SetControlExpression(0, "`Left Y+`");     // Up
+  m_main_stick->SetControlExpression(1, "`Left Y-`");   // Down
+  m_main_stick->SetControlExpression(2, "`Left X-`");   // Left
+  m_main_stick->SetControlExpression(3, "`Left X+`");  // Right
 #elif __APPLE__
   m_main_stick->SetControlExpression(0, "`Up Arrow`");     // Up
   m_main_stick->SetControlExpression(1, "`Down Arrow`");   // Down
@@ -223,8 +223,8 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
   m_main_stick->SetCalibrationFromGate(ControllerEmu::SquareStickGate(1.0));
 
   // Triggers
-  m_triggers->SetControlExpression(0, "`Full Axis 4+`");  // L
-  m_triggers->SetControlExpression(1, "`Full Axis 5+`");  // R
+  m_triggers->SetControlExpression(0, "`Trigger L`");  // L
+  m_triggers->SetControlExpression(1, "`Trigger R`");  // R
 }
 
 bool GCPad::GetMicButton() const

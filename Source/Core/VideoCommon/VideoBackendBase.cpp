@@ -226,8 +226,8 @@ const std::vector<std::unique_ptr<VideoBackendBase>>& VideoBackendBase::GetAvail
 
     // UWP - We bump D3D11 to the top for now 
 #ifdef _WIN32
-    backends.push_back(std::make_unique<DX11::VideoBackend>());
     backends.push_back(std::make_unique<DX12::VideoBackend>());
+    backends.push_back(std::make_unique<DX11::VideoBackend>());
 #endif
 #if defined(HAS_OPENGL) && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
     backends.push_back(std::make_unique <OGL::VideoBackend>());
