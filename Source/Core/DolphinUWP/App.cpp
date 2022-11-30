@@ -136,7 +136,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(
           winrt::to_string(file.Path().data()), BootSessionData("", DeleteSavestateAfterBoot::No));
 
-      UICommon::SetUserDirectory(winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
+      UICommon::SetUserDirectory("E:\\Dolphin Emulator\\");
       UICommon::CreateDirectories();
       UICommon::Init();
       UICommon::InitControllers(wsi);
