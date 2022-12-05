@@ -122,11 +122,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       GetGamingDeviceModelInformation(&info);
       if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
       {
-        HdmiDisplayInformation^ hdi = HdmiDisplayInformation::GetForCurrentView();
+        HdmiDisplayInformation hdi = HdmiDisplayInformation::GetForCurrentView();
         if (hdi)
         {
-          wsi.render_width = hdi->GetCurrentDisplayMode()->ResolutionWidthInRawPixels;
-          wsi.render_height = hdi->GetCurrentDisplayMode()->ResolutionHeightInRawPixels;
+          wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
+          wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
         }
       }
 
