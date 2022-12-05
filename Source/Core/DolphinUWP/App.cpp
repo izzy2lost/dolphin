@@ -8,6 +8,7 @@
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.Input.h>
+#include<winrt/windows.graphics.display.core.h>
 
 #include <Gamingdeviceinformation.h>
 
@@ -31,6 +32,7 @@ using namespace Windows::Foundation::Numerics;
 using namespace Windows::UI::Composition;
 using namespace winrt::Windows::Storage;
 using namespace winrt::Windows::Storage::Pickers;
+using namespace Windows::Graphics::Display::Core;
 
 using winrt::Windows::UI::Core::BackRequestedEventArgs;
 using winrt::Windows::UI::Core::CoreProcessEventsOption;
@@ -120,20 +122,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       GetGamingDeviceModelInformation(&info);
       if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
       {
-        switch (info.deviceId)
+        HdmiDisplayInformation^ hdi = HdmiDisplayInformation::GetForCurrentView();
+        if (hdi)
         {
-        case GAMING_DEVICE_DEVICE_ID_XBOX_ONE:
-        case GAMING_DEVICE_DEVICE_ID_XBOX_ONE_S:
-          wsi.render_width = 1920;
-          wsi.render_height = 1080;
-          break;
-
-        case GAMING_DEVICE_DEVICE_ID_XBOX_ONE_X:
-        case GAMING_DEVICE_DEVICE_ID_XBOX_ONE_X_DEVKIT:
-        default:  // Forward compatibility
-          wsi.render_width = 3840;
-          wsi.render_height = 2160;
-          break;
+          wsi.render_width = hdi->GetCurrentDisplayMode()->ResolutionWidthInRawPixels;
+          wsi.render_height = hdi->GetCurrentDisplayMode()->ResolutionHeightInRawPixels;
         }
       }
 
