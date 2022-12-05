@@ -44,7 +44,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
   IFrameworkView CreateView() { return *this; }
 
-  void Initialize(CoreApplicationView const& v) { v.Activated({this, &App::OnActivate}); }
+  void Initialize(CoreApplicationView const& v) {
+    v.Activated({this, &App::OnActivate});
+    CoreApplication::EnteredBackground({this, &App::EnteredBackground});
+    CoreApplication::Suspending({this, &App::Suspending});
+  }
 
   void Load(hstring const&) {}
 
@@ -148,13 +152,37 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     }
   }
 
-  void SetWindow(CoreWindow const& w) {}
+  void SetWindow(CoreWindow const& w)
+  {
+    w.Closed({this, &App::OnClosed});
+  }
+
+  void OnClosed(const IInspectable&, const winrt::Windows::UI::Core::CoreWindowEventArgs& args) {
+    m_shutdown_requested.Set();
+  }
 
   void OnActivate(const winrt::Windows::ApplicationModel::Core::CoreApplicationView&,
                   const winrt::Windows::ApplicationModel::Activation::IActivatedEventArgs& args)
   {
     CoreWindow window = CoreWindow::GetForCurrentThread();
     window.Activate();
+  }
+
+  void EnteredBackground(const IInspectable&,
+                         const winrt::Windows::ApplicationModel::EnteredBackgroundEventArgs& args)
+  {
+  }
+
+  void Suspending(const IInspectable&,
+                  const winrt::Windows::ApplicationModel::SuspendingEventArgs& args)
+  {
+    m_shutdown_requested.Set();
+
+    // Chances are we won't get to the end of the run loop
+
+    Core::Stop();
+    Core::Shutdown();
+    UICommon::Shutdown();
   }
 };
 
@@ -167,30 +195,6 @@ int WINAPIV WinMain()
   winrt::uninit_apartment();
 
   return 0;
-}
-
-void ExitSample() noexcept
-{
-  winrt::Windows::ApplicationModel::Core::CoreApplication::Exit();
-}
-
-void UpdateRunningFlag()
-{
-  if (m_shutdown_requested.TestAndClear())
-  {
-    const auto ios = IOS::HLE::GetIOS();
-    const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
-    if (!m_tried_graceful_shutdown.IsSet() && stm &&
-        std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
-    {
-      ProcessorInterface::PowerButton_Tap();
-      m_tried_graceful_shutdown.Set();
-    }
-    else
-    {
-      m_running.Clear();
-    }
-  }
 }
 
 std::vector<std::string> Host_GetPreferredLocales()

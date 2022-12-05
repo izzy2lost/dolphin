@@ -108,6 +108,7 @@ Context::operator libusb_context*() const
   return m_impl->GetContext();
 }
 
+// Throws an exception and interrupts the other shutdown sequences on UWP
 bool Context::IsValid() const
 {
   return m_impl->GetContext() != nullptr;
