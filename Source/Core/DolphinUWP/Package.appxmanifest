@@ -3,11 +3,11 @@
   <Identity
     Name="3143e227-cbe5-41c4-aaa9-cf40132a1b22"
     Publisher="CN=SirMangler"
-    Version="0.1.17.0" />
+    Version="1.0.0.0" />
   <mp:PhoneIdentity PhoneProductId="3143e227-cbe5-41c4-aaa9-cf40132a1b22" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
   <Properties>
     <DisplayName>DolphinUWP</DisplayName>
-    <PublisherDisplayName>a</PublisherDisplayName>
+    <PublisherDisplayName>SirMangler</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
@@ -18,7 +18,7 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="DolphinUWP.App">
-      <uap:VisualElements DisplayName="DolphinUWP" Description="A project for a C++/WinRT Universal Windows Platform (UWP) app directly implementing CoreApplication"
+      <uap:VisualElements DisplayName="Dolphin Emulator" Description="An emulator for the Nintendo GameCube and Wii consoles! GameCube and Wii are trademarks of Nintendo. Dolphin Emulator is not affiliated with Nintendo."
         Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" BackgroundColor="transparent">
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
         <uap:DefaultTile/>
