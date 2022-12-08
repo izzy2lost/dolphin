@@ -1,6 +1,9 @@
 #include <windows.h>
 
+#include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
+#include <winrt/Windows.System.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.Pickers.h>
@@ -41,6 +44,7 @@ using winrt::Windows::UI::Core::CoreWindow;
 Common::Flag m_running{true};
 Common::Flag m_shutdown_requested{false};
 Common::Flag m_tried_graceful_shutdown{false};
+winrt::hstring m_launchOnExit;
 
 struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
@@ -58,8 +62,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
   void Run()
   {
-    InitializeDolphin();
-
     while (m_running.IsSet())
     {
       if (m_shutdown_requested.TestAndClear())
@@ -86,62 +88,66 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     }
   }
 
-  winrt::fire_and_forget InitializeDolphin()
+  winrt::fire_and_forget InitializeDolphinFromFile(std::string path)
   {
-    FileOpenPicker openPicker;
-    openPicker.ViewMode(PickerViewMode::List);
-    openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
-    openPicker.FileTypeFilter().Append(L".iso");
-    openPicker.FileTypeFilter().Append(L".ciso");
-    openPicker.FileTypeFilter().Append(L".rvz");
-    openPicker.FileTypeFilter().Append(L".wbfs");
-    openPicker.FileTypeFilter().Append(L".gcm");
-    openPicker.FileTypeFilter().Append(L".gcz");
-
-    auto file = co_await openPicker.PickSingleFileAsync();
-    if (file)
+    if (path.empty())
     {
-      CoreWindow window = CoreWindow::GetForCurrentThread();
-      void* abi = winrt::get_abi(window);
+      FileOpenPicker openPicker;
+      openPicker.ViewMode(PickerViewMode::List);
+      openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
+      openPicker.FileTypeFilter().Append(L".iso");
+      openPicker.FileTypeFilter().Append(L".ciso");
+      openPicker.FileTypeFilter().Append(L".rvz");
+      openPicker.FileTypeFilter().Append(L".wbfs");
+      openPicker.FileTypeFilter().Append(L".gcm");
+      openPicker.FileTypeFilter().Append(L".gcz");
 
-      WindowSystemInfo wsi;
-      wsi.type = WindowSystemType::UWP;
-      wsi.render_window = abi;
-      wsi.render_surface = abi;
-      wsi.render_width = window.Bounds().Width;
-      wsi.render_height = window.Bounds().Height;
-
-      auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
-
-      // UWP on Xbox One triggers a back request whenever the B button is pressed
-      // which can result in the app being suspended if unhandled
-      navigation.BackRequested([](const winrt::Windows::Foundation::IInspectable&,
-                                  const BackRequestedEventArgs& args) { args.Handled(true); });
-
-      GAMING_DEVICE_MODEL_INFORMATION info = {};
-      GetGamingDeviceModelInformation(&info);
-      if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
+      auto file = co_await openPicker.PickSingleFileAsync();
+      if (file)
       {
-        HdmiDisplayInformation hdi = HdmiDisplayInformation::GetForCurrentView();
-        if (hdi)
-        {
-          wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
-          wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
-        }
+        path = winrt::to_string(file.Path().data());
       }
+    }
+    
+    CoreWindow window = CoreWindow::GetForCurrentThread();
+    void* abi = winrt::get_abi(window);
 
-      std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(
-          winrt::to_string(file.Path().data()), BootSessionData("", DeleteSavestateAfterBoot::No));
+    WindowSystemInfo wsi;
+    wsi.type = WindowSystemType::UWP;
+    wsi.render_window = abi;
+    wsi.render_surface = abi;
+    wsi.render_width = window.Bounds().Width;
+    wsi.render_height = window.Bounds().Height;
 
-      UICommon::SetUserDirectory("E:\\Dolphin Emulator\\");
-      UICommon::CreateDirectories();
-      UICommon::Init();
-      UICommon::InitControllers(wsi);
+    auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
 
-      if (!BootManager::BootCore(std::move(boot), wsi))
+    // UWP on Xbox One triggers a back request whenever the B button is pressed
+    // which can result in the app being suspended if unhandled
+    navigation.BackRequested([](const winrt::Windows::Foundation::IInspectable&,
+                                const BackRequestedEventArgs& args) { args.Handled(true); });
+
+    GAMING_DEVICE_MODEL_INFORMATION info = {};
+    GetGamingDeviceModelInformation(&info);
+    if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
+    {
+      HdmiDisplayInformation hdi = HdmiDisplayInformation::GetForCurrentView();
+      if (hdi)
       {
-        fprintf(stderr, "Could not boot the specified file\n");
+        wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
+        wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
       }
+    }
+
+    std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
+
+    UICommon::SetUserDirectory("E:\\Dolphin Emulator\\");
+    UICommon::CreateDirectories();
+    UICommon::Init();
+    UICommon::InitControllers(wsi);
+
+    if (!BootManager::BootCore(std::move(boot), wsi))
+    {
+      fprintf(stderr, "Could not boot the specified file\n");
     }
   }
 
@@ -157,6 +163,46 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
   void OnActivate(const winrt::Windows::ApplicationModel::Core::CoreApplicationView&,
                   const winrt::Windows::ApplicationModel::Activation::IActivatedEventArgs& args)
   {
+    std::stringstream filePath;
+
+    if (args.Kind() == Windows::ApplicationModel::Activation::ActivationKind::Protocol)
+    {
+      auto protocolActivatedEventArgs{
+          args.as<Windows::ApplicationModel::Activation::ProtocolActivatedEventArgs>()};
+      auto query = protocolActivatedEventArgs.Uri().QueryParsed();
+
+      for (uint32_t i = 0; i < query.Size(); i++)
+      {
+        auto arg = query.GetAt(i);
+
+        // parse command line string
+        if (arg.Name() == winrt::hstring(L"cmd"))
+        {
+          std::string argVal = winrt::to_string(arg.Value());
+          // Strip the executable from the cmd argument
+          if (argVal.starts_with("dolphin.exe"))
+          {
+            argVal = argVal.substr(11, argVal.length());
+          }
+
+          std::istringstream iss(argVal);
+          std::string s;
+
+          while (iss >> std::quoted(s, '"', (char)0))
+          {
+            filePath << s;
+          }
+        }
+        else if (arg.Name() == winrt::hstring(L"launchOnExit"))
+        {
+          m_launchOnExit = arg.Value();
+        }
+      }
+    }
+
+    // Defaults to file picker if no path is present.
+    InitializeDolphinFromFile(filePath.str());
+
     CoreWindow window = CoreWindow::GetForCurrentThread();
     window.Activate();
   }
@@ -176,6 +222,15 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     Core::Stop();
     Core::Shutdown();
     UICommon::Shutdown();
+
+    if (!m_launchOnExit.empty()) {
+      winrt::Windows::Foundation::Uri m_uri {m_launchOnExit};
+      auto asyncOperation = winrt::Windows::System::Launcher::LaunchUriAsync(m_uri);
+      asyncOperation.Completed([](winrt::Windows::Foundation::IAsyncOperation<bool> const& sender,
+                                  winrt::Windows::Foundation::AsyncStatus const asyncStatus) {
+        CoreApplication::Exit();
+      });
+    }
   }
 };
 
