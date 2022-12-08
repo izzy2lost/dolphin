@@ -1,13 +1,12 @@
 #include <windows.h>
 
-#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
-#include <winrt/Windows.System.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Storage.Pickers.h>
 #include <winrt/Windows.Storage.h>
+#include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.Input.h>
@@ -16,13 +15,14 @@
 #include <Gamingdeviceinformation.h>
 
 #include <Common/WindowSystemInfo.h>
+#include <UICommon/UICommon.h>
+
 #include <Core/Boot/Boot.h>
 #include <Core/BootManager.h>
 #include <Core/Core.h>
 #include <Core/HW/ProcessorInterface.h>
 #include <Core/Host.h>
 #include <Core/IOS/STM/STM.h>
-#include <UICommon/UICommon.h>
 
 #define SDL_MAIN_HANDLED
 
@@ -50,7 +50,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
   IFrameworkView CreateView() { return *this; }
 
-  void Initialize(CoreApplicationView const& v) {
+  void Initialize(CoreApplicationView const& v)
+  {
     v.Activated({this, &App::OnActivate});
     CoreApplication::EnteredBackground({this, &App::EnteredBackground});
     CoreApplication::Suspending({this, &App::Suspending});
@@ -108,7 +109,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         path = winrt::to_string(file.Path().data());
       }
     }
-    
+
     CoreWindow window = CoreWindow::GetForCurrentThread();
     void* abi = winrt::get_abi(window);
 
@@ -138,7 +139,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       }
     }
 
-    std::unique_ptr<BootParameters> boot = BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
+    std::unique_ptr<BootParameters> boot =
+        BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
 
     UICommon::SetUserDirectory("E:\\Dolphin Emulator\\");
     UICommon::CreateDirectories();
@@ -151,12 +153,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     }
   }
 
-  void SetWindow(CoreWindow const& w)
-  {
-    w.Closed({this, &App::OnClosed});
-  }
+  void SetWindow(CoreWindow const& w) { w.Closed({this, &App::OnClosed}); }
 
-  void OnClosed(const IInspectable&, const winrt::Windows::UI::Core::CoreWindowEventArgs& args) {
+  void OnClosed(const IInspectable&, const winrt::Windows::UI::Core::CoreWindowEventArgs& args)
+  {
     m_shutdown_requested.Set();
   }
 
@@ -179,6 +179,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         if (arg.Name() == winrt::hstring(L"cmd"))
         {
           std::string argVal = winrt::to_string(arg.Value());
+
           // Strip the executable from the cmd argument
           if (argVal.starts_with("dolphin.exe"))
           {
@@ -188,6 +189,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
           std::istringstream iss(argVal);
           std::string s;
 
+          // Maintain slashes while reading the quotes
           while (iss >> std::quoted(s, '"', (char)0))
           {
             filePath << s;
@@ -195,6 +197,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
         else if (arg.Name() == winrt::hstring(L"launchOnExit"))
         {
+          // For if we want to return to a frontend
           m_launchOnExit = arg.Value();
         }
       }
@@ -217,14 +220,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
   {
     m_shutdown_requested.Set();
 
-    // Chances are we won't get to the end of the run loop
-
+    // The Series S/X quits fast, so let's immediately shutdown to ensure all the caches save.
     Core::Stop();
     Core::Shutdown();
     UICommon::Shutdown();
 
-    if (!m_launchOnExit.empty()) {
-      winrt::Windows::Foundation::Uri m_uri {m_launchOnExit};
+    if (!m_launchOnExit.empty())
+    {
+      winrt::Windows::Foundation::Uri m_uri{m_launchOnExit};
       auto asyncOperation = winrt::Windows::System::Launcher::LaunchUriAsync(m_uri);
       asyncOperation.Completed([](winrt::Windows::Foundation::IAsyncOperation<bool> const& sender,
                                   winrt::Windows::Foundation::AsyncStatus const asyncStatus) {
