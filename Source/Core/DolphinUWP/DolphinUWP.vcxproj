@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\..\packages\Microsoft.Windows.CppWinRT.2.0.220110.5\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\..\packages\Microsoft.Windows.CppWinRT.2.0.220110.5\build\native\Microsoft.Windows.CppWinRT.props')" />
   <PropertyGroup Label="Globals">
@@ -19,9 +19,17 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|ARM">
-      <Configuration>Debug</Configuration>
-      <Platform>ARM</Platform>
+    <ProjectConfiguration Include="Debug UWP|ARM64">
+      <Configuration>Debug UWP</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug UWP|Win32">
+      <Configuration>Debug UWP</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug UWP|x64">
+      <Configuration>Debug UWP</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|ARM64">
       <Configuration>Debug</Configuration>
@@ -35,9 +43,17 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|ARM">
-      <Configuration>Release</Configuration>
-      <Platform>ARM</Platform>
+    <ProjectConfiguration Include="Release UWP|ARM64">
+      <Configuration>Release UWP</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release UWP|Win32">
+      <Configuration>Release UWP</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release UWP|x64">
+      <Configuration>Release UWP</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|ARM64">
       <Configuration>Release</Configuration>
@@ -64,7 +80,16 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug UWP'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release UWP'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <LinkIncremental>false</LinkIncremental>
@@ -83,7 +108,17 @@
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'" Label="PropertySheets">
+    <Import Project="..\..\VSProps\Base.props" />
+    <Import Project="..\..\VSProps\Base.Dolphin.props" />
+    <Import Project="..\..\VSProps\PCHUse.props" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <Import Project="..\..\VSProps\Base.props" />
+    <Import Project="..\..\VSProps\Base.Dolphin.props" />
+    <Import Project="..\..\VSProps\PCHUse.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug UWP|ARM64'" Label="PropertySheets">
     <Import Project="..\..\VSProps\Base.props" />
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
@@ -93,7 +128,7 @@
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug UWP|Win32'" Label="PropertySheets">
     <Import Project="..\..\VSProps\Base.props" />
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
@@ -103,7 +138,17 @@
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug UWP|x64'" Label="PropertySheets">
+    <Import Project="..\..\VSProps\Base.props" />
+    <Import Project="..\..\VSProps\Base.Dolphin.props" />
+    <Import Project="..\..\VSProps\PCHUse.props" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="..\..\VSProps\Base.props" />
+    <Import Project="..\..\VSProps\Base.Dolphin.props" />
+    <Import Project="..\..\VSProps\PCHUse.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'" Label="PropertySheets">
     <Import Project="..\..\VSProps\Base.props" />
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
@@ -113,7 +158,7 @@
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'" Label="PropertySheets">
     <Import Project="..\..\VSProps\Base.props" />
     <Import Project="..\..\VSProps\Base.Dolphin.props" />
     <Import Project="..\..\VSProps\PCHUse.props" />
@@ -123,13 +168,16 @@
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     <PackageCertificateThumbprint>C9F9E628DB2F5338D9F5D62D65BBD452442B5079</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
-    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
     <AppxBundle>Always</AppxBundle>
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>Dolphin$(TargetSuffix)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">
     <TargetName>Dolphin$(TargetSuffix)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -153,6 +201,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link />
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -173,44 +222,80 @@
     </Link>
     <Link>
       <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2-UWP/bin/SDL2-UWP.lib;OpenAL/bin/openal32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+      </AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
       <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug UWP'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug UWP|ARM64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug UWP|Win32'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug UWP|x64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link />
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug UWP|ARM64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug UWP|ARM64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Debug UWP|ARM64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
+      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Debug UWP|ARM64'">
+      </ForceSymbolReferences>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug UWP|Win32'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug UWP|Win32'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Debug UWP|Win32'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
+      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Debug UWP|Win32'">
+      </ForceSymbolReferences>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug UWP|x64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug UWP|x64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Debug UWP|x64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
+      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Debug UWP|x64'">
+      </ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release UWP'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2-UWP/bin/SDL2-UWP.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release|x64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
-      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" />
-      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" />
-      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">
+      </ForceSymbolReferences>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'">DolphinLib/bin/DolphinLib.lib;Bochs_disasm/bin/Bochs_disasm.lib;bzip2/bin/bzip2.lib;cubeb/bin/cubeb.lib;curl/bin/curl.lib;discord-rpc/bin/discord-rpc.lib;ed25519/bin/ed25519.lib;enet/bin/enet.lib;FatFs/bin/FatFs.lib;fmt/bin/fmt.lib;FreeSurround/bin/FreeSurround.lib;glslang/bin/glslang.lib;imgui/bin/imgui.lib;liblzma/bin/liblzma.lib;libusb-1.0/bin/libusb-1.0.lib;LZO/bin/LZO.lib;mbedtls/bin/mbedtls.lib;mGBA/bin/mGBA.lib;miniupnpc/bin/miniupnpc.lib;minizip/bin/minizip.lib;picojson/bin/picojson.lib;pugixml/bin/pugixml.lib;SoundTouch/bin/SoundTouch.lib;spirv_cross/bin/spirv_cross.lib;xxhash/bin/xxhash.lib;zlib-ng/bin/zlib-ng.lib;zstd/bin/zstd.lib;spng/bin/spng.lib;SFML_Network/bin/SFML_Network.lib;SDL2/bin/SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
+      <IgnoreSpecificDefaultLibraries Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'">comsuppw.lib;comsuppwd.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'">$(BuildRootDir)$(Platform)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'">
+      </ForceSymbolReferences>
+      <ForceSymbolReferences Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'">
+      </ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="pch.h" />
-  </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
@@ -240,6 +325,9 @@
     <ProjectReference Include="..\..\..\Externals\SDL\SDL\VisualC-WinRT\SDL-UWP.vcxproj">
       <Project>{89e9b32e-a86a-47c3-a948-d2b1622925ce}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

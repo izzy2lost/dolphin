@@ -102,6 +102,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       openPicker.FileTypeFilter().Append(L".wbfs");
       openPicker.FileTypeFilter().Append(L".gcm");
       openPicker.FileTypeFilter().Append(L".gcz");
+      openPicker.FileTypeFilter().Append(L".json");
 
       auto file = co_await openPicker.PickSingleFileAsync();
       if (file)
@@ -142,7 +143,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::unique_ptr<BootParameters> boot =
         BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
 
-    UICommon::SetUserDirectory("E:\\Dolphin Emulator\\");
+    UICommon::SetUserDirectory(winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
     UICommon::CreateDirectories();
     UICommon::Init();
     UICommon::InitControllers(wsi);

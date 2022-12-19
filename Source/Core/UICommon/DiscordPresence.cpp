@@ -261,6 +261,7 @@ bool UpdateDiscordPresenceRaw(const std::string& details, const std::string& sta
 #else
   return false;
 #endif
+  return false;
 }
 
 void UpdateDiscordPresence(int party_size, SecretType type, const std::string& secret,

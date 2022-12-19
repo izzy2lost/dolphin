@@ -3,11 +3,11 @@
   <Identity
     Name="3143e227-cbe5-41c4-aaa9-cf40132a1b22"
     Publisher="CN=SirMangler"
-    Version="1.0.7.0" />
+    Version="1.0.1.0" />
   <mp:PhoneIdentity PhoneProductId="3143e227-cbe5-41c4-aaa9-cf40132a1b22" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
   <Properties>
     <DisplayName>Dolphin Emulator</DisplayName>
-    <PublisherDisplayName>SirMangler</PublisherDisplayName>
+    <PublisherDisplayName>Dolphin Emulator</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
@@ -33,6 +33,7 @@
               <uap:FileType>.rvz</uap:FileType>
               <uap:FileType>.gcz</uap:FileType>
               <uap:FileType>.gcm</uap:FileType>
+              <uap:FileType>.json</uap:FileType>
             </uap:SupportedFileTypes>
           </uap:FileOpenPicker>
         </uap:Extension>
@@ -45,6 +46,7 @@
               <uap:FileType>.wbfs</uap:FileType>
               <uap:FileType>.gcm</uap:FileType>
               <uap:FileType>.gcz</uap:FileType>
+              <uap:FileType>.json</uap:FileType>
             </uap:SupportedFileTypes>
             <uap:DisplayName>Dolphin Emulator</uap:DisplayName>
           </uap:FileTypeAssociation>

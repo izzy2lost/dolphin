@@ -43,4 +43,7 @@
     <None Include="packages.config" />
     <None Include="DolphinUWP_TemporaryKey.pfx" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+  </ItemGroup>
 </Project>

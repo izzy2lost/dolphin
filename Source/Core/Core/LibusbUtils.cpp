@@ -22,8 +22,7 @@ class Context::Impl
 public:
   Impl()
   {
-// No libusb for WinRT right now, avoid a fatal exception. - UWP
-#if (defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP))
+#if !_UWP
     const int ret = libusb_init(&m_context);
     ASSERT_MSG(IOS_USB, ret == LIBUSB_SUCCESS, "Failed to init libusb: {}", ErrorWrap(ret));
     if (ret != LIBUSB_SUCCESS)

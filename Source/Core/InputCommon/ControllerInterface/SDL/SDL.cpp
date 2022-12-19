@@ -199,8 +199,11 @@ InputBackend::InputBackend(ControllerInterface* controller_interface)
     {
       Common::ScopeGuard init_guard([this] { m_init_event.Set(); });
 
-      SDL_SetMainReady(); // - For whatever reason, SDL doesn't identity the main func properly
+#if _UWP
       if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0)
+#else
+      if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER) != 0)
+#endif
       {
         ERROR_LOG_FMT(CONTROLLERINTERFACE, "SDL failed to initialize");
         return;
@@ -228,7 +231,7 @@ InputBackend::InputBackend(ControllerInterface* controller_interface)
       }
     }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !_UWP
     // This is a hack to workaround SDL_hidapi using window messages to detect device
     // removal/arrival, yet no part of SDL pumps messages for it. It can hopefully be removed in the
     // future when SDL fixes the issue. Note this is a separate issue from SDL_HINT_JOYSTICK_THREAD.
@@ -245,8 +248,7 @@ InputBackend::InputBackend(ControllerInterface* controller_interface)
       if (!HandleEventAndContinue(e))
         return;
 
-#if defined(_WIN32) && (!defined(WINAPI_FAMILY) || (WINAPI_FAMILY == WINAPI_FAMILY_DESKTOP_APP))
-
+#if defined(_WIN32) && !_UWP
       MSG msg;
       while (window_handle && PeekMessage(&msg, window_handle, 0, 0, PM_NOREMOVE))
       {
