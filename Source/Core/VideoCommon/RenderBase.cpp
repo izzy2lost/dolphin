@@ -54,7 +54,14 @@
 #include "Core/Movie.h"
 #include "Core/System.h"
 
+#include "Core/HW/Wiimote.h"
+#include "Core/HW/WiimoteEmu/WiimoteEmu.h"
+#include "Core/HW/WiimoteEmu/Extension/Nunchuk.h"
+#include "Core/HW/GCPad.h"
+#include "Core/HW/GCPadEmu.h"
+
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
+#include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
 
 #include "VideoCommon/AbstractFramebuffer.h"
 #include "VideoCommon/AbstractStagingTexture.h"
@@ -1018,6 +1025,7 @@ bool Renderer::InitializeImGui()
   ImGui::GetIO().IniFilename = nullptr;
   ImGui::GetIO().DisplayFramebufferScale.x = m_backbuffer_scale;
   ImGui::GetIO().DisplayFramebufferScale.y = m_backbuffer_scale;
+  ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; 
   ImGui::GetIO().FontGlobalScale = m_backbuffer_scale;
   ImGui::GetStyle().ScaleAllSizes(m_backbuffer_scale);
   ImGui::GetStyle().WindowRounding = 7.0f;
@@ -1151,6 +1159,33 @@ void Renderer::BeginImGuiFrameUnlocked()
   io.DisplaySize =
       ImVec2(static_cast<float>(m_backbuffer_width), static_cast<float>(m_backbuffer_height));
   io.DeltaTime = time_diff_secs;
+
+#ifdef _UWP
+  std::vector<std::unique_ptr<ControllerEmu::Control>>* btns;
+  std::vector<std::unique_ptr<ControllerEmu::Control>>* stick;
+
+  if (SConfig::GetInstance().bWii)
+  {
+    btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;
+    stick = &Wiimote::GetNunchukGroup(0, WiimoteEmu::NunchukGroup::Stick)->controls;
+  }
+  else
+  {
+    btns = &Pad::GetGroup(0, PadGroup::Buttons)->controls;
+    stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
+  }
+
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+  io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+  io.NavVisible = true;
+
+  io.NavInputs[ImGuiNavInput_Activate] = btns->at(0)->GetState() == 1.0f ? 1.0 : 0;
+  io.NavInputs[ImGuiNavInput_Cancel] = btns->at(1)->GetState() == 1.0f ? 1.0 : 0;
+  io.NavInputs[ImGuiNavInput_DpadUp] = stick->at(0)->GetState() == 1.0f ? 1.0 : 0;
+  io.NavInputs[ImGuiNavInput_DpadDown] = stick->at(1)->GetState() == 1.0f ? 1.0 : 0;
+  io.NavInputs[ImGuiNavInput_DpadLeft] = stick->at(2)->GetState() == 1.0f ? 1.0 : 0;
+  io.NavInputs[ImGuiNavInput_DpadRight] = stick->at(3)->GetState() == 1.0f ? 1.0 : 0;
+#endif
 
   ImGui::NewFrame();
 }
@@ -1373,6 +1408,7 @@ void Renderer::Swap(u32 xfb_addr, u32 fb_width, u32 fb_stride, u32 fb_height, u6
 
         g_perf_metrics.DrawImGuiStats(m_backbuffer_scale);
         DrawDebugText();
+        OSD::DrawMenu();
         OSD::DrawMessages();
         ImGui::Render();
       }

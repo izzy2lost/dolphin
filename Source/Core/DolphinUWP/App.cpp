@@ -1,3 +1,6 @@
+#include "Host.h"
+#include "UWPUtils.h"
+
 #include <windows.h>
 
 #include <winrt/Windows.ApplicationModel.Activation.h>
@@ -14,15 +17,17 @@
 
 #include <Gamingdeviceinformation.h>
 
-#include <Common/WindowSystemInfo.h>
-#include <UICommon/UICommon.h>
+#include "Common/WindowSystemInfo.h"
+#include "UICommon/UICommon.h"
+#include "VideoCommon/OnScreenDisplay.h"
 
-#include <Core/Boot/Boot.h>
-#include <Core/BootManager.h>
-#include <Core/Core.h>
-#include <Core/HW/ProcessorInterface.h>
-#include <Core/Host.h>
-#include <Core/IOS/STM/STM.h>
+#include "Core/Boot/Boot.h"
+#include "Core/BootManager.h"
+#include "Core/Core.h"
+#include "Core/HW/ProcessorInterface.h"
+#include "Core/Host.h"
+#include "Core/IOS/STM/STM.h"
+#include "Core/HotkeyManager.h"
 
 #define SDL_MAIN_HANDLED
 
@@ -41,9 +46,9 @@ using winrt::Windows::UI::Core::BackRequestedEventArgs;
 using winrt::Windows::UI::Core::CoreProcessEventsOption;
 using winrt::Windows::UI::Core::CoreWindow;
 
+namespace UWP
+{
 Common::Flag m_running{true};
-Common::Flag m_shutdown_requested{false};
-Common::Flag m_tried_graceful_shutdown{false};
 winrt::hstring m_launchOnExit;
 
 struct App : implements<App, IFrameworkViewSource, IFrameworkView>
@@ -65,15 +70,15 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
   {
     while (m_running.IsSet())
     {
-      if (m_shutdown_requested.TestAndClear())
+      if (g_shutdown_requested.TestAndClear())
       {
         const auto ios = IOS::HLE::GetIOS();
         const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
-        if (!m_tried_graceful_shutdown.IsSet() && stm &&
+        if (!g_tried_graceful_shutdown.IsSet() && stm &&
             std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
         {
           ProcessorInterface::PowerButton_Tap();
-          m_tried_graceful_shutdown.Set();
+          g_tried_graceful_shutdown.Set();
         }
         else
         {
@@ -82,6 +87,21 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       }
 
       ::Core::HostDispatchJobs();
+
+      if (Core::IsRunningAndStarted())
+      {
+        Core::UpdateInputGate(false);
+        HotkeyManagerEmu::GetStatus(false);
+        ControlReference::SetInputGate(true);
+
+        HotkeyManagerEmu::GetStatus(true);
+
+        if (HotkeyManagerEmu::IsPressed(HK_OPEN_OVERLAY, false))
+        {
+          OSD::ToggleMenuVisibility();
+        }
+      }
+
       CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
           CoreProcessEventsOption::ProcessAllIfPresent);
 
@@ -95,7 +115,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     {
       FileOpenPicker openPicker;
       openPicker.ViewMode(PickerViewMode::List);
-      openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
+      openPicker.SuggestedStartLocation(PickerLocationId::HomeGroup);
       openPicker.FileTypeFilter().Append(L".iso");
       openPicker.FileTypeFilter().Append(L".ciso");
       openPicker.FileTypeFilter().Append(L".rvz");
@@ -116,7 +136,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     WindowSystemInfo wsi;
     wsi.type = WindowSystemType::UWP;
-    wsi.render_window = abi;
     wsi.render_surface = abi;
     wsi.render_width = window.Bounds().Width;
     wsi.render_height = window.Bounds().Height;
@@ -143,7 +162,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::unique_ptr<BootParameters> boot =
         BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
 
-    UICommon::SetUserDirectory(winrt::to_string(ApplicationData::Current().LocalFolder().Path()));
+    UICommon::SetUserDirectory(GetUserLocation());
     UICommon::CreateDirectories();
     UICommon::Init();
     UICommon::InitControllers(wsi);
@@ -158,7 +177,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
   void OnClosed(const IInspectable&, const winrt::Windows::UI::Core::CoreWindowEventArgs& args)
   {
-    m_shutdown_requested.Set();
+    g_shutdown_requested.Set();
   }
 
   void OnActivate(const winrt::Windows::ApplicationModel::Core::CoreApplicationView&,
@@ -206,6 +225,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     // Defaults to file picker if no path is present.
     InitializeDolphinFromFile(filePath.str());
+    //InitializeDolphinFromFile("Assets/game.iso");
 
     CoreWindow window = CoreWindow::GetForCurrentThread();
     window.Activate();
@@ -219,8 +239,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
   void Suspending(const IInspectable&,
                   const winrt::Windows::ApplicationModel::SuspendingEventArgs& args)
   {
-    m_shutdown_requested.Set();
-
     // The Series S/X quits fast, so let's immediately shutdown to ensure all the caches save.
     Core::Stop();
     Core::Shutdown();
@@ -237,12 +255,13 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     }
   }
 };
+}
 
 int WINAPIV WinMain()
 {
   winrt::init_apartment();
 
-  CoreApplication::Run(make<App>());
+  CoreApplication::Run(make<UWP::App>());
 
   winrt::uninit_apartment();
 

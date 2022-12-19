@@ -46,4 +46,9 @@ void ClearMessages();
 
 void SetObscuredPixelsLeft(int width);
 void SetObscuredPixelsTop(int height);
+
+// Xbox Popout Menu
+void ToggleMenuVisibility();
+void DrawMenu();
+
 }  // namespace OSD

@@ -12,11 +12,25 @@
 #include <fmt/format.h>
 #include <imgui.h>
 
+#include "VideoCommon/VideoConfig.h"
 #include "Common/CommonTypes.h"
 #include "Common/Config/Config.h"
 #include "Common/Timer.h"
 
+#ifdef _UWP
+#include "DolphinUWP/Host.h"
+#include "DolphinUWP/UWPUtils.h"
+#endif
+
 #include "Core/Config/MainSettings.h"
+#include "Core/Core.h"
+#include "Core/Config/GraphicsSettings.h"
+#include "Core/HW/Wiimote.h"
+#include "Core/HW/WiimoteEmu/WiimoteEmu.h"
+#include "Core/HW/WiimoteEmu/Extension/Nunchuk.h"
+#include "Core/HW/GCPad.h"
+#include "Core/HW/GCPadEmu.h"
+#include "Core/ConfigManager.h"
 
 namespace OSD
 {
@@ -28,6 +42,7 @@ constexpr float MESSAGE_DROP_TIME = 5000.f;  // Ms to drop OSD messages that has
 
 static std::atomic<int> s_obscured_pixels_left = 0;
 static std::atomic<int> s_obscured_pixels_top = 0;
+static bool s_showing_menu = false;
 
 struct Message
 {
@@ -150,5 +165,205 @@ void SetObscuredPixelsLeft(int width)
 void SetObscuredPixelsTop(int height)
 {
   s_obscured_pixels_top = height;
+}
+
+void ToggleMenuVisibility()
+{
+  s_showing_menu = !s_showing_menu;
+}
+
+void DrawMenu()
+{
+  if (!s_showing_menu)
+    return;
+
+  // Update input states
+  std::vector<std::unique_ptr<ControllerEmu::Control>>* btns;
+  std::vector<std::unique_ptr<ControllerEmu::Control>>* stick;
+
+  if (SConfig::GetInstance().bWii)
+  {
+    btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;
+    stick = &Wiimote::GetNunchukGroup(0, WiimoteEmu::NunchukGroup::Stick)->controls;
+  }
+  else
+  {
+    btns = &Pad::GetGroup(0, PadGroup::Buttons)->controls;
+    stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
+  }
+
+  const float center_x = ImGui::GetIO().DisplaySize.x * 0.5f;
+  const float center_y = ImGui::GetIO().DisplaySize.y * 0.5f;
+  const float scale = ImGui::GetIO().DisplayFramebufferScale.x;
+
+  ImGui::SetNextWindowSize(ImVec2(300.0f * scale, 300.0f * scale), ImGuiCond_Always);
+  ImGui::SetNextWindowPos(ImVec2(center_x, center_y), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowFocus();
+
+  if (ImGui::Begin("side_menu", nullptr, ImGuiWindowFlags_NoTitleBar))
+  {
+    bool dualCore = Config::Get(Config::MAIN_CPU_THREAD);
+    if (ImGui::Checkbox("Dual Core", &dualCore)) {
+      Core::QueueHostJob([dualCore] {
+          Config::SetBaseOrCurrent(Config::MAIN_CPU_THREAD, dualCore);
+          }, false);
+    }
+
+    const char* ir_items[] = {"1x (Native)", "2x (720p)", "3x (1080p)", "4x (1440p)", "5x (2640p)", "6x (4K)"};
+    static int ir_idx = Config::Get(Config::GFX_EFB_SCALE);
+
+    if (ImGui::TreeNode("Internal Resolution"))
+    {
+      for (int i = 0; i < 4; i++)
+      {
+        ImGui::PushID(i);
+        if (ImGui::RadioButton(ir_items[i], &ir_idx))
+        {
+          Core::QueueHostJob([i] {
+            Config::SetBaseOrCurrent(Config::GFX_EFB_SCALE, i);
+
+          });
+        }
+        ImGui::PopID();
+      }
+
+      ImGui::TreePop();
+    }
+
+    const char* aspect_items[] = {"Auto", "Force 16:9", "Force 4:3", "Stretch"};
+    static int aspect_idx = 0;
+    auto aspect = Config::Get(Config::GFX_ASPECT_RATIO);
+    switch (aspect)
+    {
+    case AspectMode::Auto:
+      aspect_idx = 0;
+      break;
+    case AspectMode::AnalogWide:
+      aspect_idx = 1;
+      break;
+    case AspectMode::Analog:
+      aspect_idx = 2;
+      break;
+    case AspectMode::Stretch:
+      aspect_idx = 3;
+      break;
+    }
+
+    if (ImGui::TreeNode("Aspect Ratio"))
+    {
+      for (int i = 0; i < 4; i++)
+      {
+        ImGui::PushID(i);
+        if (ImGui::RadioButton(aspect_items[i], &aspect_idx))
+        {
+          Core::QueueHostJob([i] {
+            switch (i)
+            {
+            case 0:
+              Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Auto);
+              break;
+            case 1:
+              Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::AnalogWide);
+              break;
+            case 2:
+              Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Analog);
+              break;
+            case 3:
+              Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Stretch);
+              break;
+            }
+          });  
+        }
+        ImGui::PopID();
+      }
+
+      ImGui::TreePop();
+    }
+
+    const char* shader_items[] = { "Synchronous", "Hybrid Ubershaders", "Exclusive Ubershaders", "Skip Drawing" };
+    static int shader_idx = 0;
+    auto shader = Config::Get(Config::GFX_SHADER_COMPILATION_MODE);
+    switch (shader)
+    {
+    case ShaderCompilationMode::Synchronous:
+      shader_idx = 0;
+      break;
+    case ShaderCompilationMode::AsynchronousUberShaders:
+      shader_idx = 1;
+      break;
+    case ShaderCompilationMode::SynchronousUberShaders:
+      shader_idx = 2;
+      break;
+    case ShaderCompilationMode::AsynchronousSkipRendering:
+      shader_idx = 3;
+      break;
+    }
+
+    if (ImGui::TreeNode("Shader Compilation"))
+    {
+      for (int i = 0; i < 4; i++)
+      {
+        ImGui::PushID(i);
+        if (ImGui::RadioButton(shader_items[i], &shader_idx))
+        {
+          Core::QueueHostJob([i] {
+            switch (i)
+            {
+            case 0:
+              Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
+                                       ShaderCompilationMode::Synchronous);
+              break;
+            case 1:
+              Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
+                                       ShaderCompilationMode::AsynchronousUberShaders);
+              break;
+            case 2:
+              Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
+                                       ShaderCompilationMode::SynchronousUberShaders);
+              break;
+            case 3:
+              Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
+                                       ShaderCompilationMode::AsynchronousSkipRendering);
+              break;
+            }
+          });
+        }
+        ImGui::PopID();
+      }
+
+      ImGui::TreePop();
+    }
+
+#if _UWP
+    if (ImGui::TreeNode("Config Location (Requires Restart)"))
+    {
+      if (ImGui::Button("Set Dolphin User Folder Location"))
+      {
+        UWP::SetNewUserLocation();
+        s_showing_menu = false;
+      }
+
+      if (ImGui::Button("Reset Dolphin User Folder Location"))
+      {
+        UWP::ResetUserLocation();
+      }
+      ImGui::TreePop();
+    }
+
+    if (ImGui::Button("Exit Game"))
+    {
+      if (!UWP::g_tried_graceful_shutdown.TestAndClear())
+      {
+        UWP::g_shutdown_requested.Set();
+      }
+      else
+      {
+        exit(0);
+      }
+    } 
+  }
+#endif
+
+  ImGui::End();
 }
 }  // namespace OSD
