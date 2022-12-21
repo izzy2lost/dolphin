@@ -433,7 +433,7 @@ void HotkeyManager::LoadDefaults(const ControllerInterface& ciface)
   // General hotkeys
   set_key_expression(HK_OPEN, hotkey_string({"Ctrl", "O"}));
 #ifdef _UWP
-  set_key_expression(HK_OPEN_OVERLAY, "`WGInput/0/Xbox One Game Controller:Thumb L` & `WGInput/0/Xbox One Game Controller:Thumb R`");
+  set_key_expression(HK_OPEN_OVERLAY, "`WGInput/0/Xbox One Game Controller:Thumb L` & `WGInput/0/Xbox One Game Controller:View`");
 #endif
   set_key_expression(HK_PLAY_PAUSE, "F10");
 #ifdef _WIN32

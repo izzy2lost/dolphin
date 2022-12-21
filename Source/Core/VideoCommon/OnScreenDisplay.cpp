@@ -30,6 +30,7 @@
 #include "Core/HW/WiimoteEmu/Extension/Nunchuk.h"
 #include "Core/HW/GCPad.h"
 #include "Core/HW/GCPadEmu.h"
+#include "Core/HW/DVD/DVDInterface.h"
 #include "Core/ConfigManager.h"
 
 namespace OSD
@@ -349,7 +350,15 @@ void DrawMenu()
       }
       ImGui::TreePop();
     }
+#endif
 
+    if (ImGui::Button("Change Disc"))
+    {
+      UWP::PickDisc();
+      s_showing_menu = false;
+    }
+
+#if _UWP
     if (ImGui::Button("Exit Game"))
     {
       if (!UWP::g_tried_graceful_shutdown.TestAndClear())
