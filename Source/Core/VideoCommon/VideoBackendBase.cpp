@@ -44,12 +44,14 @@
 #include "VideoCommon/CPMemory.h"
 #include "VideoCommon/CommandProcessor.h"
 #include "VideoCommon/Fifo.h"
+#include "VideoCommon/FrameDumper.h"
 #include "VideoCommon/FramebufferManager.h"
 #include "VideoCommon/GeometryShaderManager.h"
 #include "VideoCommon/IndexGenerator.h"
 #include "VideoCommon/OpcodeDecoding.h"
 #include "VideoCommon/PixelEngine.h"
 #include "VideoCommon/PixelShaderManager.h"
+#include "VideoCommon/Present.h"
 #include "VideoCommon/RenderBase.h"
 #include "VideoCommon/TMEM.h"
 #include "VideoCommon/TextureCacheBase.h"
@@ -327,6 +329,8 @@ void VideoBackendBase::InitializeShared()
   // do not initialize again for the config window
   m_initialized = true;
 
+  g_presenter = std::make_unique<VideoCommon::Presenter>();
+
   auto& system = Core::System::GetInstance();
   auto& command_processor = system.GetCommandProcessor();
   command_processor.Init(system);
@@ -338,6 +342,7 @@ void VideoBackendBase::InitializeShared()
   system.GetGeometryShaderManager().Init();
   system.GetPixelShaderManager().Init();
   TMEM::Init();
+  g_frame_dumper = std::make_unique<FrameDumper>();
 
   g_Config.VerifyValidity();
   UpdateActiveConfig();
@@ -345,6 +350,9 @@ void VideoBackendBase::InitializeShared()
 
 void VideoBackendBase::ShutdownShared()
 {
+  g_frame_dumper.reset();
+  g_presenter.reset();
+
   if (g_shader_cache)
     g_shader_cache->Shutdown();
   if (g_renderer)
