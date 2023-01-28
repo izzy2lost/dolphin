@@ -190,7 +190,6 @@ void ImGuiFrontend::RefreshControls(bool updateGameSelection)
   io.NavInputs[ImGuiNavInput_DpadRight] =
       m_controller->FindInput("Left X+")->GetState() == 1.0f ? 1.0 : 0;
 
-
   // wrap around if exceeding the max games or going below
   if (updateGameSelection)
   {
@@ -289,7 +288,7 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
     CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
         winrt::Windows::UI::Core::CoreProcessEventsOption::ProcessAllIfPresent);
 
-    if (m_controller && !state.controlsDisabled)
+    if (m_controller && m_controller->IsValid() && !state.controlsDisabled)
     {
       if (m_controller->FindInput("View")->GetState() == 1.0f)
       {
@@ -299,7 +298,7 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
           state.menuPressed = true;
         }
 
-        LoadGameList();
+        LoadGameList();   
       }
       else
       {
