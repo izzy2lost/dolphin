@@ -133,6 +133,8 @@ ImGuiFrontend::ImGuiFrontend()
 
   m_d3dWnd.CreateRenderTarget();
 
+  g_controller_interface.Initialize({});
+
   PopulateControls();
 
   UICommon::SetUserDirectory(UWP::GetUserLocation());
@@ -151,28 +153,28 @@ static bool COMIsInitialized()
 
 void ImGuiFrontend::PopulateControls()
 {
-  try
-  {
-    WGI::RawGameController::RawGameControllerAdded(
-        [](auto&&, const WGI::RawGameController raw_game_controller) {
-          auto dev = ciface::WGInput::CreateDevice(raw_game_controller);
-          if (dev)
-            m_controller = dev;
-        });
+  g_controller_interface.RefreshDevices();
 
-    WGI::RawGameController::RawGameControllerRemoved(
-        [](auto&&, const WGI::RawGameController raw_game_controller) {
-          m_controller = nullptr;
-        });
-  }
-  catch (winrt::hresult_error)
+  if (!g_controller_interface.HasDefaultDevice())
+    return;
+
+  ciface::Core::DeviceQualifier dq;
+  dq.FromString(g_controller_interface.GetDefaultDeviceString());
+  auto device = g_controller_interface.FindDevice(dq);
+  if (device)
   {
-    ERROR_LOG_FMT(CONTROLLERINTERFACE, "WGInput: Failed to register event handlers");
+    m_controller = std::move(device);
   }
 }
 
 void ImGuiFrontend::RefreshControls(bool updateGameSelection)
 {
+  if (m_controller == nullptr || m_controller->Inputs().empty() || m_controller->Outputs().empty())
+    PopulateControls();
+
+  if (m_controller == nullptr || !m_controller->IsValid())
+    return;
+
   m_controller->UpdateInput();
 
   ImGuiIO& io = ImGui::GetIO();
@@ -288,6 +290,9 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
     CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
         winrt::Windows::UI::Core::CoreProcessEventsOption::ProcessAllIfPresent);
 
+    if (!state.controlsDisabled)
+      RefreshControls(!state.showSettingsWindow);
+
     if (m_controller && m_controller->IsValid() && !state.controlsDisabled)
     {
       if (m_controller->FindInput("View")->GetState() == 1.0f)
@@ -304,8 +309,6 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
       {
         state.menuPressed = false;
       }
-
-      RefreshControls(!state.showSettingsWindow);
     }
 
     ImGui_ImplDX11_NewFrame();
@@ -411,6 +414,7 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
 
   m_d3dWnd.DeInitImGui();
   m_d3dWnd.CleanupDeviceD3D();
+  g_controller_interface.Shutdown();
 
   return selection;
 }

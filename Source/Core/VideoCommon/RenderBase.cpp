@@ -1160,30 +1160,37 @@ void Renderer::BeginImGuiFrameUnlocked()
   io.DeltaTime = time_diff_secs;
 
 #ifdef _UWP
-  std::vector<std::unique_ptr<ControllerEmu::Control>>* btns;
-  std::vector<std::unique_ptr<ControllerEmu::Control>>* stick;
-  
-  if (SConfig::GetInstance().bWii)
+  if (g_controller_interface.HasDefaultDevice())
   {
-    btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;
-    stick = &Wiimote::GetNunchukGroup(0, WiimoteEmu::NunchukGroup::Stick)->controls;
-  }
-  else
-  {
-    btns = &Pad::GetGroup(0, PadGroup::Buttons)->controls;
-    stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
-  }
+    std::vector<std::unique_ptr<ControllerEmu::Control>>* btns = nullptr;
+    std::vector<std::unique_ptr<ControllerEmu::Control>>* stick = nullptr;
 
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-  io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-  io.NavVisible = true;
 
-  io.NavInputs[ImGuiNavInput_Activate] = btns->at(0)->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_Cancel] = btns->at(1)->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadUp] = stick->at(0)->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadDown] = stick->at(1)->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadLeft] = stick->at(2)->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadRight] = stick->at(3)->GetState() == 1.0f ? 1.0 : 0;
+    if (SConfig::GetInstance().bWii)
+    {
+      btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;
+      stick = &Wiimote::GetNunchukGroup(0, WiimoteEmu::NunchukGroup::Stick)->controls;
+    }
+    else
+    {
+      btns = &Pad::GetGroup(0, PadGroup::Buttons)->controls;
+      stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
+    }
+
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+    io.NavVisible = true;
+
+    if (btns != nullptr && stick != nullptr)
+    {
+      io.NavInputs[ImGuiNavInput_Activate] = btns->at(0)->GetState() == 1.0f ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_Cancel] = btns->at(1)->GetState() == 1.0f ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadUp] = stick->at(0)->GetState() == 1.0f ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadDown] = stick->at(1)->GetState() == 1.0f ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadLeft] = stick->at(2)->GetState() == 1.0f ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadRight] = stick->at(3)->GetState() == 1.0f ? 1.0 : 0;
+    }
+  }
 #endif
 
   ImGui::NewFrame();

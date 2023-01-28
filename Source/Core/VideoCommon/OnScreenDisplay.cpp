@@ -345,19 +345,12 @@ void DrawMenu()
       bool waitForCompile = Config::Get(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING);
       if (ImGui::Checkbox("Compile Shaders Before Starting", &waitForCompile))
       {
-        Config::SetBaseOrCurrent(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING, waitForCompile);
-        Config::Save();
+        Core::QueueHostJob([waitForCompile] {
+          Config::SetBaseOrCurrent(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING, waitForCompile);
+        });
       }
 
       ImGui::TreePop();
-    }
-
-    bool waitForCompile = Config::Get(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING);
-    if (ImGui::Checkbox("Compile Shaders Before Starting", &waitForCompile))
-    {
-      Core::QueueHostJob([waitForCompile] {
-        Config::SetBaseOrCurrent(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING, waitForCompile);
-      });
     }
 
     bool hiresTexEnable = Config::Get(Config::GFX_HIRES_TEXTURES);
