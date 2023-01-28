@@ -680,8 +680,8 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
 #if _UWP
   m_buttons->SetControlExpression(2, "`WGInput/0/Xbox One Game Controller:Button X`");
   m_buttons->SetControlExpression(3, "`WGInput/0/Xbox One Game Controller:Button Y`");
-  m_buttons->SetControlExpression(4, "WGInput/0/Xbox One Game Controller:View");
-  m_buttons->SetControlExpression(5, "WGInput/0/Xbox One Game Controller:Menu");
+  m_buttons->SetControlExpression(4, "`WGInput/0/Xbox One Game Controller:View`");
+  m_buttons->SetControlExpression(5, "`WGInput/0/Xbox One Game Controller:Menu`");
 #else
   m_buttons->SetControlExpression(2, "`1`");  // 1
   m_buttons->SetControlExpression(3, "`2`");  // 2
@@ -690,7 +690,7 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
 #endif
 
 #if _UWP
-  m_buttons->SetControlExpression(6, "WGInput/0/Xbox One Game Controller:Menu & View");  // Home
+  m_buttons->SetControlExpression(6, "`WGInput/0/Xbox One Game Controller:Menu & View`");  // Home
 #elif _WIN32
   m_buttons->SetControlExpression(6, "RETURN");  // Home
 #else
@@ -721,10 +721,10 @@ void Wiimote::LoadDefaults(const ControllerInterface& ciface)
 
 // DPad
 #if _UWP
-  m_dpad->SetControlExpression(0, "WGInput/0/Xbox One Game Controller:Pad N");  // Up
-  m_dpad->SetControlExpression(1, "WGInput/0/Xbox One Game Controller:Pad S");  // Down
-  m_dpad->SetControlExpression(2, "WGInput/0/Xbox One Game Controller:Pad W");  // Left
-  m_dpad->SetControlExpression(3, "WGInput/0/Xbox One Game Controller:Pad E");  // Right
+  m_dpad->SetControlExpression(0, "`WGInput/0/Xbox One Game Controller:Pad N`");  // Up
+  m_dpad->SetControlExpression(1, "`WGInput/0/Xbox One Game Controller:Pad S`");  // Down
+  m_dpad->SetControlExpression(2, "`WGInput/0/Xbox One Game Controller:Pad W`");  // Left
+  m_dpad->SetControlExpression(3, "`WGInput/0/Xbox One Game Controller:Pad E`");  // Right
 #elif _WIN32
   m_dpad->SetControlExpression(0, "UP");     // Up
   m_dpad->SetControlExpression(1, "DOWN");   // Down

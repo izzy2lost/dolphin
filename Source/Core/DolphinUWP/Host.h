@@ -3,6 +3,6 @@
 #include "Common/Flag.h"
 
 namespace UWP {
-static Common::Flag g_shutdown_requested{false};
-static Common::Flag g_tried_graceful_shutdown{false};
+extern Common::Flag g_shutdown_requested;
+extern Common::Flag g_tried_graceful_shutdown;
 }

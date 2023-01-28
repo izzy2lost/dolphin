@@ -18,7 +18,7 @@
 
 using namespace winrt;
 using namespace winrt::Windows::Storage::Pickers;
-using namespace Windows::ApplicationModel::Core;
+using namespace winrt::Windows::ApplicationModel::Core;
 
 namespace UWP
 {
@@ -44,7 +44,7 @@ inline std::string GetUserLocation()
 
 #pragma warning(push)
 #pragma warning(disable : 4265)
-inline winrt::fire_and_forget OpenNewUserPicker()
+inline winrt::fire_and_forget OpenNewUserPicker(std::function<void()> folderPickedCallback)
 {
   std::string user_path =
       winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path()) +
@@ -54,21 +54,14 @@ inline winrt::fire_and_forget OpenNewUserPicker()
   openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
 
   auto folder = co_await openPicker.PickSingleFolderAsync();
+
   if (folder)
   {
     std::ofstream t(user_path);
     t << winrt::to_string(folder.Path().data());
   }
-}
 
-
-inline void SetNewUserLocation()
-{
-  CoreApplication::MainView().CoreWindow().Dispatcher().RunAsync(
-      winrt::Windows::UI::Core::CoreDispatcherPriority::Normal, []
-      {
-        OpenNewUserPicker();
-      });
+  folderPickedCallback();
 }
 
 inline winrt::fire_and_forget OpenDiscPicker()
@@ -93,6 +86,24 @@ inline winrt::fire_and_forget OpenDiscPicker()
   {
     Core::RunAsCPUThread(
         [&file] { DVDInterface::ChangeDisc(winrt::to_string(file.Path().data())); });
+  }
+}
+
+inline winrt::fire_and_forget OpenGameFolderPicker(std::function<void(std::string)> folderPickedCallback)
+{
+  FolderPicker openPicker;
+  openPicker.ViewMode(PickerViewMode::List);
+  openPicker.SuggestedStartLocation(PickerLocationId::ComputerFolder);
+
+  auto folder = co_await openPicker.PickSingleFolderAsync();
+  if (folder)
+  {
+    folderPickedCallback(winrt::to_string(folder.Path().data()));
+  }
+  else
+  {
+    // Return empty so the caller can handle an invalid/empty result.
+    folderPickedCallback("");
   }
 }
 

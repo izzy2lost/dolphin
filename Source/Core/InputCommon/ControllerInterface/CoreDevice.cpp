@@ -269,8 +269,12 @@ std::string DeviceContainer::GetDefaultDeviceString() const
 {
   std::lock_guard lk(m_devices_mutex);
   // Devices are already sorted by priority
+  #if !_UWP
+  // Skip this because dolphin doesn't properly set a controller as the default device
+  // and instead opts into choosing nothing, thus breaking the defaults even if manually specified.
   if (m_devices.empty() || m_devices[0]->GetSortPriority() < 0)
     return "";
+  #endif
 
   DeviceQualifier device_qualifier;
   device_qualifier.FromDevice(m_devices[0].get());

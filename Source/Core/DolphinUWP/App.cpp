@@ -1,5 +1,6 @@
 #include "Host.h"
 #include "UWPUtils.h"
+#include "ImGuiFrontend.h"
 
 #include <windows.h>
 
@@ -19,6 +20,7 @@
 
 #include "Common/WindowSystemInfo.h"
 #include "UICommon/UICommon.h"
+#include "UICommon/GameFile.h"
 #include "VideoCommon/OnScreenDisplay.h"
 
 #include "Core/Boot/Boot.h"
@@ -28,6 +30,7 @@
 #include "Core/Host.h"
 #include "Core/IOS/STM/STM.h"
 #include "Core/HotkeyManager.h"
+#include <iostream>
 
 #define SDL_MAIN_HANDLED
 
@@ -50,6 +53,8 @@ namespace UWP
 {
 Common::Flag m_running{true};
 winrt::hstring m_launchOnExit;
+Common::Flag g_shutdown_requested {false};
+Common::Flag g_tried_graceful_shutdown {false};
 
 struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
@@ -68,44 +73,77 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
   void Run()
   {
-    while (m_running.IsSet())
+    CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
+        winrt::Windows::UI::Core::CoreProcessEventsOption::ProcessAllIfPresent);
+
+    while (true)
     {
-      if (g_shutdown_requested.TestAndClear())
+      // ImGUI frontend
+      auto frontend = new ImGuiFrontend::ImGuiFrontend();
+      auto game = frontend->RunUntilSelection();
+
+      InitializeDolphinFromFile(game->GetFilePath());
+      m_running.Set();
+      g_tried_graceful_shutdown.Clear();
+
+      // Dolphin loop
+      while (m_running.IsSet())
       {
-        const auto ios = IOS::HLE::GetIOS();
-        const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
-        if (!g_tried_graceful_shutdown.IsSet() && stm &&
-            std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
+        if (g_shutdown_requested.TestAndClear())
         {
-          ProcessorInterface::PowerButton_Tap();
-          g_tried_graceful_shutdown.Set();
+          const auto ios = IOS::HLE::GetIOS();
+          const auto stm = ios ? ios->GetDeviceByName("/dev/stm/eventhook") : nullptr;
+          if (!g_tried_graceful_shutdown.IsSet() && stm &&
+              std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
+          {
+            ProcessorInterface::PowerButton_Tap();
+            g_tried_graceful_shutdown.Set();
+          }
+          else
+          {
+            m_running.Clear();
+          }
         }
-        else
+
+        ::Core::HostDispatchJobs();
+
+        if (Core::IsRunningAndStarted())
         {
-          m_running.Clear();
+          Core::UpdateInputGate(false);
+          HotkeyManagerEmu::GetStatus(false);
+          ControlReference::SetInputGate(true);
+
+          HotkeyManagerEmu::GetStatus(true);
+
+          if (HotkeyManagerEmu::IsPressed(HK_OPEN_OVERLAY, false))
+          {
+            OSD::ToggleMenuVisibility();
+          }
         }
+
+        CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
+            CoreProcessEventsOption::ProcessAllIfPresent);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
 
-      ::Core::HostDispatchJobs();
+      // Make sure we've shut down properly.
+      Core::Stop();
+      Core::Shutdown();
+      UICommon::Shutdown();
 
-      if (Core::IsRunningAndStarted())
+      // If there's another frontend, boot to that.
+      if (!m_launchOnExit.empty())
       {
-        Core::UpdateInputGate(false);
-        HotkeyManagerEmu::GetStatus(false);
-        ControlReference::SetInputGate(true);
-
-        HotkeyManagerEmu::GetStatus(true);
-
-        if (HotkeyManagerEmu::IsPressed(HK_OPEN_OVERLAY, false))
-        {
-          OSD::ToggleMenuVisibility();
-        }
+        winrt::Windows::Foundation::Uri m_uri{m_launchOnExit};
+        auto asyncOperation = winrt::Windows::System::Launcher::LaunchUriAsync(m_uri);
+        asyncOperation.Completed([](winrt::Windows::Foundation::IAsyncOperation<bool> const& sender,
+                                    winrt::Windows::Foundation::AsyncStatus const asyncStatus) {
+          CoreApplication::Exit();
+        });
       }
 
-      CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
-          CoreProcessEventsOption::ProcessAllIfPresent);
-
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      // Continue looping to open the frontend again
     }
   }
 
@@ -160,6 +198,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       {
         wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
         wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
+        // Our UI is based on 1080p, and we're adding a modifier to zoom in by 80%
+        wsi.render_surface_scale = (wsi.render_width / 1920) * 1.8f;
       }
     }
 
@@ -227,38 +267,34 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       }
     }
 
-    // Defaults to file picker if no path is present.
-    InitializeDolphinFromFile(filePath.str());
-    //InitializeDolphinFromFile("Assets/game.iso");
-
     CoreWindow window = CoreWindow::GetForCurrentThread();
     window.Activate();
   }
 
-  void EnteredBackground(const IInspectable&,
-                         const winrt::Windows::ApplicationModel::EnteredBackgroundEventArgs& args)
-  {
-  }
-
-  void Suspending(const IInspectable&,
-                  const winrt::Windows::ApplicationModel::SuspendingEventArgs& args)
-  {
-    // The Series S/X quits fast, so let's immediately shutdown to ensure all the caches save.
-    Core::Stop();
-    Core::Shutdown();
-    UICommon::Shutdown();
-
-    if (!m_launchOnExit.empty())
+    void EnteredBackground(const IInspectable&,
+                           const winrt::Windows::ApplicationModel::EnteredBackgroundEventArgs& args)
     {
-      winrt::Windows::Foundation::Uri m_uri{m_launchOnExit};
-      auto asyncOperation = winrt::Windows::System::Launcher::LaunchUriAsync(m_uri);
-      asyncOperation.Completed([](winrt::Windows::Foundation::IAsyncOperation<bool> const& sender,
-                                  winrt::Windows::Foundation::AsyncStatus const asyncStatus) {
-        CoreApplication::Exit();
-      });
     }
-  }
-};
+
+    void Suspending(const IInspectable&,
+                    const winrt::Windows::ApplicationModel::SuspendingEventArgs& args)
+    {
+      // The Series S/X quits fast, so let's immediately shutdown to ensure all the caches save.
+      Core::Stop();
+      Core::Shutdown();
+      UICommon::Shutdown();
+
+      if (!m_launchOnExit.empty())
+      {
+        winrt::Windows::Foundation::Uri m_uri{m_launchOnExit};
+        auto asyncOperation = winrt::Windows::System::Launcher::LaunchUriAsync(m_uri);
+        asyncOperation.Completed([](winrt::Windows::Foundation::IAsyncOperation<bool> const& sender,
+                                    winrt::Windows::Foundation::AsyncStatus const asyncStatus) {
+          CoreApplication::Exit();
+        });
+      }
+    }
+  };
 }
 
 int WINAPIV WinMain()

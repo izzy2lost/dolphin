@@ -1025,9 +1025,8 @@ bool Renderer::InitializeImGui()
   ImGui::GetIO().IniFilename = nullptr;
   ImGui::GetIO().DisplayFramebufferScale.x = m_backbuffer_scale;
   ImGui::GetIO().DisplayFramebufferScale.y = m_backbuffer_scale;
-  ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; 
+  ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
   ImGui::GetIO().FontGlobalScale = m_backbuffer_scale;
-  ImGui::GetStyle().ScaleAllSizes(m_backbuffer_scale);
   ImGui::GetStyle().WindowRounding = 7.0f;
 
   PortableVertexDeclaration vdecl = {};
@@ -1161,13 +1160,9 @@ void Renderer::BeginImGuiFrameUnlocked()
   io.DeltaTime = time_diff_secs;
 
 #ifdef _UWP
-  io.DisplayFramebufferScale =
-      ImVec2((m_backbuffer_width/1920.f), (m_backbuffer_height/1080.f));
-  io.FontGlobalScale = (m_backbuffer_width / 1920.f);
-  
   std::vector<std::unique_ptr<ControllerEmu::Control>>* btns;
   std::vector<std::unique_ptr<ControllerEmu::Control>>* stick;
-
+  
   if (SConfig::GetInstance().bWii)
   {
     btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;

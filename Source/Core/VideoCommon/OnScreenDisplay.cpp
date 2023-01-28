@@ -204,26 +204,35 @@ void DrawMenu()
   if (ImGui::Begin("side_menu", nullptr, ImGuiWindowFlags_NoTitleBar))
   {
     bool dualCore = Config::Get(Config::MAIN_CPU_THREAD);
-    if (ImGui::Checkbox("Dual Core", &dualCore)) {
-      Core::QueueHostJob([dualCore] {
-          Config::SetBaseOrCurrent(Config::MAIN_CPU_THREAD, dualCore);
-          }, false);
+    if (ImGui::Checkbox("Dual Core", &dualCore))
+    {
+      Core::QueueHostJob(
+          [dualCore] { Config::SetBaseOrCurrent(Config::MAIN_CPU_THREAD, dualCore); }, false);
     }
 
-    const char* ir_items[] = {"1x (Native)", "2x (720p)", "3x (1080p)", "4x (1440p)", "5x (2640p)", "6x (4K)"};
-    static int ir_idx = Config::Get(Config::GFX_EFB_SCALE);
+    bool showFps = Config::Get(Config::GFX_SHOW_FPS);
+    if (ImGui::Checkbox("Show FPS", &showFps))
+    {
+      Core::QueueHostJob([showFps] { Config::SetBaseOrCurrent(Config::GFX_SHOW_FPS, showFps); },
+                         false);
+    }
+
+    const char* ir_items[] = {"Auto (Multiple of 640x528)",      "Native (640x528)",
+                              "2x Native (1280x1056) for 720p",  "3x Native (1920x1584) for 1080p",
+                              "4x Native (2560x2112) for 1440p", "5x Native (3200x2640)",
+                              "6x Native (3840x3168) for 4K",    "7x Native (4480x3696)",
+                              "8x Native (5120x4224) for 5K"};
+
+    int ir_idx = Config::Get(Config::GFX_EFB_SCALE);
 
     if (ImGui::TreeNode("Internal Resolution"))
     {
-      for (int i = 0; i < 4; i++)
+      for (int i = 0; i < 9; i++)
       {
         ImGui::PushID(i);
-        if (ImGui::RadioButton(ir_items[i], &ir_idx))
+        if (ImGui::RadioButton(ir_items[i], i == ir_idx))
         {
-          Core::QueueHostJob([i] {
-            Config::SetBaseOrCurrent(Config::GFX_EFB_SCALE, i);
-
-          });
+          Core::QueueHostJob([i] { Config::SetBase(Config::GFX_EFB_SCALE, i); });
         }
         ImGui::PopID();
       }
@@ -232,7 +241,7 @@ void DrawMenu()
     }
 
     const char* aspect_items[] = {"Auto", "Force 16:9", "Force 4:3", "Stretch"};
-    static int aspect_idx = 0;
+    int aspect_idx = 0;
     auto aspect = Config::Get(Config::GFX_ASPECT_RATIO);
     switch (aspect)
     {
@@ -255,7 +264,7 @@ void DrawMenu()
       for (int i = 0; i < 4; i++)
       {
         ImGui::PushID(i);
-        if (ImGui::RadioButton(aspect_items[i], &aspect_idx))
+        if (ImGui::RadioButton(aspect_items[i], i == aspect_idx))
         {
           Core::QueueHostJob([i] {
             switch (i)
@@ -273,7 +282,7 @@ void DrawMenu()
               Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Stretch);
               break;
             }
-          });  
+          });
         }
         ImGui::PopID();
       }
@@ -281,8 +290,9 @@ void DrawMenu()
       ImGui::TreePop();
     }
 
-    const char* shader_items[] = { "Synchronous", "Hybrid Ubershaders", "Exclusive Ubershaders", "Skip Drawing" };
-    static int shader_idx = 0;
+    const char* shader_items[] = {"Synchronous", "Hybrid Ubershaders", "Exclusive Ubershaders",
+                                  "Skip Drawing"};
+    int shader_idx = 0;
     auto shader = Config::Get(Config::GFX_SHADER_COMPILATION_MODE);
     switch (shader)
     {
@@ -305,7 +315,7 @@ void DrawMenu()
       for (int i = 0; i < 4; i++)
       {
         ImGui::PushID(i);
-        if (ImGui::RadioButton(shader_items[i], &shader_idx))
+        if (ImGui::RadioButton(shader_items[i], i == shader_idx))
         {
           Core::QueueHostJob([i] {
             switch (i)
@@ -332,25 +342,39 @@ void DrawMenu()
         ImGui::PopID();
       }
 
+      bool waitForCompile = Config::Get(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING);
+      if (ImGui::Checkbox("Compile Shaders Before Starting", &waitForCompile))
+      {
+        Config::SetBaseOrCurrent(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING, waitForCompile);
+        Config::Save();
+      }
+
       ImGui::TreePop();
     }
 
-#if _UWP
-    if (ImGui::TreeNode("Config Location (Requires Restart)"))
+    bool waitForCompile = Config::Get(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING);
+    if (ImGui::Checkbox("Compile Shaders Before Starting", &waitForCompile))
     {
-      if (ImGui::Button("Set Dolphin User Folder Location"))
-      {
-        UWP::SetNewUserLocation();
-        s_showing_menu = false;
-      }
-
-      if (ImGui::Button("Reset Dolphin User Folder Location"))
-      {
-        UWP::ResetUserLocation();
-      }
-      ImGui::TreePop();
+      Core::QueueHostJob([waitForCompile] {
+        Config::SetBaseOrCurrent(Config::GFX_WAIT_FOR_SHADERS_BEFORE_STARTING, waitForCompile);
+      });
     }
-#endif
+
+    bool hiresTexEnable = Config::Get(Config::GFX_HIRES_TEXTURES);
+    if (ImGui::Checkbox("Load Custom Textures", &hiresTexEnable))
+    {
+      Core::QueueHostJob([hiresTexEnable] {
+        Config::SetBaseOrCurrent(Config::GFX_HIRES_TEXTURES, hiresTexEnable);
+      });
+    }
+
+    bool prefetchTexEnable = Config::Get(Config::GFX_CACHE_HIRES_TEXTURES);
+    if (ImGui::Checkbox("Prefetch Custom Textures", &prefetchTexEnable))
+    {
+      Core::QueueHostJob([prefetchTexEnable] {
+        Config::SetBaseOrCurrent(Config::GFX_CACHE_HIRES_TEXTURES, prefetchTexEnable);
+      });
+    }
 
     if (ImGui::Button("Change Disc"))
     {
@@ -363,16 +387,17 @@ void DrawMenu()
     {
       if (!UWP::g_tried_graceful_shutdown.TestAndClear())
       {
+        s_showing_menu = false;
         UWP::g_shutdown_requested.Set();
       }
       else
       {
         exit(0);
       }
-    } 
-  }
+    }
 #endif
 
-  ImGui::End();
+    ImGui::End();
+  }
 }
 }  // namespace OSD

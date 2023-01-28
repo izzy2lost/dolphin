@@ -187,7 +187,7 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
   m_buttons->SetControlExpression(4, "`Bumper R`");  // Z
 
 #ifdef _WIN32
-  m_buttons->SetControlExpression(5, "`WGInput/0/Xbox One Game Controller:Menu`");  // Start
+  m_buttons->SetControlExpression(5, "`RETURN`");  // Start
 #else
   // OS X/Linux
   // Start

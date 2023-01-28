@@ -649,6 +649,42 @@ static void AddDevice(const WGI::RawGameController& raw_game_controller)
   }
 }
 
+std::shared_ptr<ciface::Core::Device>
+CreateDevice(const WGI::RawGameController& raw_game_controller)
+{
+  // Get user-facing device name if available. Otherwise generate a name from vid/pid.
+  std::string device_name;
+  try
+  {
+    device_name = StripWhitespace(WStringToUTF8(raw_game_controller.DisplayName().c_str()));
+    if (device_name.empty())
+    {
+      const u16 vid = raw_game_controller.HardwareVendorId();
+      const u16 pid = raw_game_controller.HardwareProductId();
+      device_name = fmt::format("Device_{:04x}:{:04x}", vid, pid);
+      INFO_LOG_FMT(CONTROLLERINTERFACE, "WGInput: Empty device name, using {}", device_name);
+    }
+  }
+  catch (winrt::hresult_error)
+  {
+    device_name = "Device";
+    ERROR_LOG_FMT(CONTROLLERINTERFACE, "WGInput: Failed to get device name, using {}", device_name);
+  }
+
+  try
+  {
+    WGI::Gamepad gamepad = WGI::Gamepad::FromGameController(raw_game_controller);
+    // Note that gamepad may be nullptr here. The Device class will deal with this.
+    auto dev = std::make_shared<Device>(std::move(device_name), raw_game_controller, gamepad);
+
+    return std::move(dev);
+  }
+  catch (winrt::hresult_error)
+  {
+    ERROR_LOG_FMT(CONTROLLERINTERFACE, "WGInput: Failed to add device {}", device_name);
+  }
+}
+
 static void RemoveDevice(const WGI::RawGameController& raw_game_controller)
 {
   g_controller_interface.RemoveDevice([&](const auto* dev) {
