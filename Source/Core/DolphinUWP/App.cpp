@@ -96,7 +96,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
           if (!g_tried_graceful_shutdown.IsSet() && stm &&
               std::static_pointer_cast<IOS::HLE::STMEventHookDevice>(stm)->HasHookInstalled())
           {
-            ProcessorInterface::PowerButton_Tap();
+            UICommon::TriggerSTMPowerEvent();
             g_tried_graceful_shutdown.Set();
           }
           else
