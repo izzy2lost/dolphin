@@ -17,6 +17,10 @@
 #include <Objbase.h>
 #endif
 
+#ifdef _UWP
+#include <winrt/base.h>
+#endif
+
 // ~10 ms - needs to be at least 240 for surround
 constexpr u32 BUFFER_SAMPLES = 512;
 
@@ -44,9 +48,15 @@ CubebStream::CubebStream()
   Common::Event sync_event;
   m_work_queue.EmplaceItem([this, &sync_event] {
     Common::ScopeGuard sync_event_guard([&sync_event] { sync_event.Set(); });
-    auto result = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
-    m_coinit_success = result == S_OK;
-    m_should_couninit = result == S_OK || result == S_FALSE;
+    #ifdef _UWP
+      winrt::init_apartment();
+      m_coinit_success = true;
+      m_should_couninit = true;
+    #else
+      auto result = ::CoInitializeEx(nullptr, COINIT_MULTITHREADED | COINIT_DISABLE_OLE1DDE);
+      m_coinit_success = result == S_OK;
+      m_should_couninit = result == S_OK || result == S_FALSE;
+    #endif
   });
   sync_event.Wait();
 }
@@ -137,13 +147,20 @@ CubebStream::~CubebStream()
 #endif
     cubeb_stream_stop(m_stream);
     cubeb_stream_destroy(m_stream);
+
 #ifdef _WIN32
+#ifdef _UWP
+    winrt::uninit_apartment();
+    m_coinit_success = false;
+    m_should_couninit = false;
+#else
     if (m_should_couninit)
     {
       m_should_couninit = false;
       CoUninitialize();
     }
     m_coinit_success = false;
+#endif
   });
   sync_event.Wait();
 #endif

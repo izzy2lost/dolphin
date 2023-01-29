@@ -1143,7 +1143,8 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateGameList()
 {
   if (ImGui::GetIO().NavInputs[ImGuiNavInput_Activate] > 0.5f)
   {
-    return m_games[m_selectedGameIdx];
+    if (m_games.size() != 0)
+      return m_games[m_selectedGameIdx];
   }
 
   auto table_flags = ImGuiTableFlags_Borders;
