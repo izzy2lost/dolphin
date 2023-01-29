@@ -945,6 +945,13 @@ void ImGuiFrontend::CreateWiiTab(UIState* state)
 
 void ImGuiFrontend::CreateAdvancedTab(UIState* state)
 {
+  bool viSkipEnable = Config::Get(Config::GFX_HACK_VI_SKIP);
+  if (ImGui::Checkbox("Enable VI Skip", &viSkipEnable))
+  {
+    Config::SetBaseOrCurrent(Config::GFX_HACK_VI_SKIP, viSkipEnable);
+    Config::Save();
+  }
+
   bool hiresTexEnable = Config::Get(Config::GFX_HIRES_TEXTURES);
   if (ImGui::Checkbox("Load Custom Textures", &hiresTexEnable))
   {

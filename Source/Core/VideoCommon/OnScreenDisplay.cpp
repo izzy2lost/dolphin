@@ -217,6 +217,14 @@ void DrawMenu()
                          false);
     }
 
+    bool viSkipEnable = Config::Get(Config::GFX_HACK_VI_SKIP);
+    if (ImGui::Checkbox("Enable VI Skip (Hack)", &viSkipEnable))
+    {
+      Core::QueueHostJob(
+          [viSkipEnable] { Config::SetBaseOrCurrent(Config::GFX_HACK_VI_SKIP, viSkipEnable); },
+                               false);
+    }
+
     const char* ir_items[] = {"Auto (Multiple of 640x528)",      "Native (640x528)",
                               "2x Native (1280x1056) for 720p",  "3x Native (1920x1584) for 1080p",
                               "4x Native (2560x2112) for 1440p", "5x Native (3200x2640)",
