@@ -388,7 +388,9 @@ bool VideoBackendBase::InitializeShared(std::unique_ptr<AbstractGfx> gfx,
   g_Config.VerifyValidity();
   UpdateActiveConfig();
 
+#if !_UWP
   g_shader_cache->InitializeShaderCache();
+#endif
 
   return true;
 }
