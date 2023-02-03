@@ -51,7 +51,7 @@ using winrt::Windows::UI::Core::CoreWindow;
 
 namespace UWP
 {
-Common::Flag m_running{true};
+Common::Flag m_running{false};
 winrt::hstring m_launchOnExit;
 Common::Flag g_shutdown_requested {false};
 Common::Flag g_tried_graceful_shutdown {false};
@@ -79,11 +79,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     while (true)
     {
       // ImGUI frontend
-      auto frontend = new ImGuiFrontend::ImGuiFrontend();
-      auto game = frontend->RunUntilSelection();
+      if (!m_running.IsSet())
+      {
+        auto frontend = new ImGuiFrontend::ImGuiFrontend();
+        auto game = frontend->RunUntilSelection();
 
-      InitializeDolphinFromFile(game->GetFilePath());
-      m_running.Set();
+        InitializeDolphinFromFile(game->GetFilePath());
+      }
+
       g_tried_graceful_shutdown.Clear();
 
       // Dolphin loop
@@ -140,6 +143,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         asyncOperation.Completed([](winrt::Windows::Foundation::IAsyncOperation<bool> const& sender,
                                     winrt::Windows::Foundation::AsyncStatus const asyncStatus) {
           CoreApplication::Exit();
+          return;
         });
       }
 
@@ -215,6 +219,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     {
       fprintf(stderr, "Could not boot the specified file\n");
     }
+
+    m_running.Set();
   }
 
   void SetWindow(CoreWindow const& w) { w.Closed({this, &App::OnClosed}); }
@@ -265,6 +271,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
           m_launchOnExit = arg.Value();
         }
       }
+    }
+
+    std::string gamePath = filePath.str();
+    if (!gamePath.empty() && gamePath != "")
+    {
+      InitializeDolphinFromFile(gamePath);
     }
 
     CoreWindow window = CoreWindow::GetForCurrentThread();
