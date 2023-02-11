@@ -256,7 +256,9 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
 #if _UWP
   // Triggers
   m_triggers->SetControlExpression(0, "`WGInput/0/Xbox One Game Controller:Trigger L`");  // L
+  m_triggers->SetControlExpression(2, "`WGInput/0/Xbox One Game Controller:Trigger L`");  // Analog-L
   m_triggers->SetControlExpression(1, "`WGInput/0/Xbox One Game Controller:Trigger R`");  // R
+  m_triggers->SetControlExpression(3, "`WGInput/0/Xbox One Game Controller:Trigger R`");  // Analog-R
 
   // Rumble
   m_rumble->SetControlExpression(0, "`WGInput/0/Xbox One Game Controller:Rumble 0`");
