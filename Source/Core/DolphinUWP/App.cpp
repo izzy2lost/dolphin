@@ -203,7 +203,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
         wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
         // Our UI is based on 1080p, and we're adding a modifier to zoom in by 80%
-        wsi.render_surface_scale = (wsi.render_width / 1920) * 1.8f;
+        wsi.render_surface_scale = ((float) wsi.render_width / 1920.0f) * 1.8f;
       }
     }
 

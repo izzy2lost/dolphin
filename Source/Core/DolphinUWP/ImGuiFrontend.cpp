@@ -119,7 +119,7 @@ ImGuiFrontend::ImGuiFrontend()
       uint32_t width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
       uint32_t height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
 
-      m_frameScale = (width / 1920) * frontend_modifier;
+      m_frameScale = ((float) width / 1920.0f) * frontend_modifier;
       io.DisplaySize.x = width;
       io.DisplaySize.y = height;
       io.FontGlobalScale = m_frameScale;
@@ -1272,12 +1272,21 @@ ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateBackgroundTex()
   if (m_background_tex != nullptr)
     return m_background_tex;
 
-  if (!File::Exists("Assets/background.png"))
-    return nullptr;
+  auto local_state = winrt::to_string(
+    winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path());
 
+  std::string bg_path = local_state + "/background.png";
+
+  if (!File::Exists(bg_path))
+  {
+    bg_path = "Assets/background.png";
+
+    if (!File::Exists(bg_path))
+      return nullptr;
+  }
+    
   std::string png;
-  if (!File::ReadFileToString("Assets/background.png",
-                              png))
+  if (!File::ReadFileToString(bg_path, png))
     return {};
 
   std::vector<uint8_t> buffer = {png.begin(), png.end()};

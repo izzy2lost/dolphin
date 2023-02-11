@@ -178,21 +178,6 @@ void DrawMenu()
   if (!s_showing_menu)
     return;
 
-  // Update input states
-  std::vector<std::unique_ptr<ControllerEmu::Control>>* btns;
-  std::vector<std::unique_ptr<ControllerEmu::Control>>* stick;
-
-  if (SConfig::GetInstance().bWii)
-  {
-    btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;
-    stick = &Wiimote::GetNunchukGroup(0, WiimoteEmu::NunchukGroup::Stick)->controls;
-  }
-  else
-  {
-    btns = &Pad::GetGroup(0, PadGroup::Buttons)->controls;
-    stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
-  }
-
   const float center_x = ImGui::GetIO().DisplaySize.x * 0.5f;
   const float center_y = ImGui::GetIO().DisplaySize.y * 0.5f;
   const float scale = ImGui::GetIO().DisplayFramebufferScale.x;
