@@ -1078,6 +1078,7 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
     });
   }
 
+  ImGui::Spacing();
   ImGui::Separator();
 
   if (ImGui::Button("Set Dolphin User Folder Location"))
@@ -1102,6 +1103,11 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
     UICommon::CreateDirectories();
     UICommon::Init();
   }
+
+  ImGui::Spacing();
+  ImGui::Separator();
+  ImGui::TextWrapped("Note: Please remember to do your USB filesystem setup, or paths to "
+                     "your USB will not work properly!");
 }
 
 std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateMainPage()

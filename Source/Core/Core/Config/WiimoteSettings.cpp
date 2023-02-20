@@ -10,11 +10,11 @@ namespace Config
 const Info<WiimoteSource> WIIMOTE_1_SOURCE{{System::WiiPad, "Wiimote1", "Source"},
                                            WiimoteSource::Emulated};
 const Info<WiimoteSource> WIIMOTE_2_SOURCE{{System::WiiPad, "Wiimote2", "Source"},
-                                           WiimoteSource::None};
+                                           WiimoteSource::Emulated};
 const Info<WiimoteSource> WIIMOTE_3_SOURCE{{System::WiiPad, "Wiimote3", "Source"},
-                                           WiimoteSource::None};
+                                           WiimoteSource::Emulated};
 const Info<WiimoteSource> WIIMOTE_4_SOURCE{{System::WiiPad, "Wiimote4", "Source"},
-                                           WiimoteSource::None};
+                                           WiimoteSource::Emulated};
 const Info<WiimoteSource> WIIMOTE_BB_SOURCE{{System::WiiPad, "BalanceBoard", "Source"},
                                             WiimoteSource::None};
 

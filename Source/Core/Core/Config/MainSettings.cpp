@@ -141,11 +141,11 @@ const Info<SerialInterface::SIDevices>& GetInfoForSIDevice(int channel)
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice0"},
                                        SerialInterface::SIDEVICE_GC_CONTROLLER},
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice1"},
-                                       SerialInterface::SIDEVICE_NONE},
+                                       SerialInterface::SIDEVICE_GC_CONTROLLER},
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice2"},
-                                       SerialInterface::SIDEVICE_NONE},
+                                       SerialInterface::SIDEVICE_GC_CONTROLLER},
       Info<SerialInterface::SIDevices>{{System::Main, "Core", "SIDevice3"},
-                                       SerialInterface::SIDEVICE_NONE},
+                                       SerialInterface::SIDEVICE_GC_CONTROLLER},
   };
   return infos[channel];
 }
