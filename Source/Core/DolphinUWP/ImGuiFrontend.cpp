@@ -1272,10 +1272,8 @@ ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateBackgroundTex()
   if (m_background_tex != nullptr)
     return m_background_tex;
 
-  auto local_state = winrt::to_string(
-    winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path());
-
-  std::string bg_path = local_state + "/background.png";
+  auto user_folder = File::GetUserPath(0);
+  std::string bg_path = user_folder + "/background.png";
 
   if (!File::Exists(bg_path))
   {
