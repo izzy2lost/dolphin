@@ -166,7 +166,7 @@
   <PropertyGroup Label="UserMacros">
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <PackageCertificateThumbprint>C9F9E628DB2F5338D9F5D62D65BBD452442B5079</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>0C09AD43AECEDF33DB1E8FDD237EB5863271265A</PackageCertificateThumbprint>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>

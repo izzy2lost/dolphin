@@ -149,7 +149,7 @@ public:
   };
   static_assert(sizeof(CalibrationData) == 16, "Wrong size");
 
-  Nunchuk();
+  Nunchuk(unsigned int index);
 
   void BuildDesiredExtensionState(DesiredExtensionState* target_state) override;
   void Update(const DesiredExtensionState& target_state) override;
@@ -186,6 +186,7 @@ private:
   ControllerEmu::Buttons* m_buttons;
   ControllerEmu::AnalogStick* m_stick;
   ControllerEmu::IMUAccelerometer* m_imu_accelerometer;
+  unsigned int m_index;
 
   // Dynamics:
   MotionState m_swing_state;

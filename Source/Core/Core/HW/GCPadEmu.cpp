@@ -173,12 +173,12 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
   // Buttons
 #if _UWP
   // If we're running on UWP, we're likely on an Xbox. These defaults work for Xbox One & Series.
-  m_buttons->SetControlExpression(0, "`Button A`");  // A
-  m_buttons->SetControlExpression(1, "`Button B`");  // B
-  m_buttons->SetControlExpression(2, "`Button X`");  // X
-  m_buttons->SetControlExpression(3, "`Button Y`");  // Y
-  m_buttons->SetControlExpression(4, "`Bumper R`");  // Z
-  m_buttons->SetControlExpression(5, "`Menu`");      // Start
+  m_buttons->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Button A`");  // A
+  m_buttons->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Button B`");  // B
+  m_buttons->SetControlExpression(2, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Button X`");  // X
+  m_buttons->SetControlExpression(3, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Button Y`");  // Y
+  m_buttons->SetControlExpression(4, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Bumper R`");  // Z
+  m_buttons->SetControlExpression(5, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Menu`");      // Start
 #else
   m_buttons->SetControlExpression(0, "`Button A`");  // A
   m_buttons->SetControlExpression(1, "`Button B`");  // B
@@ -197,16 +197,16 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
 
 #if _UWP
   // D-Pad
-  m_dpad->SetControlExpression(0, "`Pad N`");  // Up
-  m_dpad->SetControlExpression(1, "`Pad S`");  // Down
-  m_dpad->SetControlExpression(2, "`Pad W`");  // Left
-  m_dpad->SetControlExpression(3, "`Pad E`");  // Right
+  m_dpad->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Pad N`");  // Up
+  m_dpad->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Pad S`");  // Down
+  m_dpad->SetControlExpression(2, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Pad W`");  // Left
+  m_dpad->SetControlExpression(3, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Pad E`");  // Right
 
   // C Stick
-  m_c_stick->SetControlExpression(0, "`Right Y+`");  // Up
-  m_c_stick->SetControlExpression(1, "`Right Y-`");  // Down
-  m_c_stick->SetControlExpression(2, "`Right X-`");  // Left
-  m_c_stick->SetControlExpression(3, "`Right X+`");  // Right
+  m_c_stick->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right Y+`");  // Up
+  m_c_stick->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right Y-`");  // Down
+  m_c_stick->SetControlExpression(2, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right X-`");  // Left
+  m_c_stick->SetControlExpression(3, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right X+`");  // Right
 #else
       // D-Pad
   m_dpad->SetControlExpression(0, "`T`");  // Up
@@ -215,20 +215,20 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
   m_dpad->SetControlExpression(3, "`H`");  // Right
 
   // C Stick
-  m_c_stick->SetControlExpression(0, "`Right Y+`");  // Up
-  m_c_stick->SetControlExpression(1, "`Right Y-`");  // Down
-  m_c_stick->SetControlExpression(2, "`Right X-`");  // Left
-  m_c_stick->SetControlExpression(3, "`Right X+`");  // Right
+  m_c_stick->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right Y+`");  // Up
+  m_c_stick->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right Y-`");  // Down
+  m_c_stick->SetControlExpression(2, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right X-`");  // Left
+  m_c_stick->SetControlExpression(3, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Right X+`");  // Right
   // Modifier
   m_c_stick->SetControlExpression(4, "`Ctrl`");
 #endif
 
   // Control Stick
 #if _UWP
-  m_main_stick->SetControlExpression(0, "`Left Y+`");  // Up
-  m_main_stick->SetControlExpression(1, "`Left Y-`");  // Down
-  m_main_stick->SetControlExpression(2, "`Left X-`");  // Left
-  m_main_stick->SetControlExpression(3, "`Left X+`");  // Right
+  m_main_stick->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Left Y+`");  // Up
+  m_main_stick->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Left Y-`");  // Down
+  m_main_stick->SetControlExpression(2, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Left X-`");  // Left
+  m_main_stick->SetControlExpression(3, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Left X+`");  // Right
 #elif _WIN32
   m_main_stick->SetControlExpression(0, "`UP`");     // Up
   m_main_stick->SetControlExpression(1, "`DOWN`");   // Down
@@ -255,13 +255,13 @@ void GCPad::LoadDefaults(const ControllerInterface& ciface)
 
 #if _UWP
   // Triggers
-  m_triggers->SetControlExpression(0, "`Trigger L`");  // L
-  m_triggers->SetControlExpression(2, "`Trigger L`");  // Analog-L
-  m_triggers->SetControlExpression(1, "`Trigger R`");  // R
-  m_triggers->SetControlExpression(3, "`Trigger R`");  // Analog-R
+  m_triggers->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Trigger L`");  // L
+  m_triggers->SetControlExpression(2, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Trigger L`");  // Analog-L
+  m_triggers->SetControlExpression(1, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Trigger R`");  // R
+  m_triggers->SetControlExpression(3, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Trigger R`");  // Analog-R
 
   // Rumble
-  m_rumble->SetControlExpression(0, "`Rumble 0`");
+  m_rumble->SetControlExpression(0, "`WGInput/" + std::to_string(m_index) + "/Xbox One Game Controller:Rumble 0`");
 #else
   m_triggers->SetControlExpression(0, "`Q`"); // L
   m_triggers->SetControlExpression(1, "`W`"); // R
