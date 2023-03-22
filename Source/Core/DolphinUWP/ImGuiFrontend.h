@@ -1,6 +1,7 @@
 #pragma once
 
 #include "D3DWindow.h"
+#include "Core/TitleDatabase.h"
 
 namespace UICommon
 {
@@ -13,18 +14,37 @@ namespace ImGuiFrontend
 {
 class UIState;
 
+class FrontendResult
+{
+public:
+  std::shared_ptr<UICommon::GameFile> game_result;
+  bool netplay;
+
+  FrontendResult() {
+    game_result = nullptr;
+    netplay = false;
+  }
+
+  FrontendResult(std::shared_ptr<UICommon::GameFile> game)
+  {
+    game_result = game;
+    netplay = false;
+  }
+};
+
 class ImGuiFrontend
 {
 public:
   ImGuiFrontend();
-  std::shared_ptr<UICommon::GameFile> RunUntilSelection();
+  FrontendResult RunUntilSelection();
+  Core::TitleDatabase m_title_database;
 
 private:
   void PopulateControls();
   void RefreshControls(bool updateGameSelection);
 
-  std::shared_ptr<UICommon::GameFile> RunMainLoop();
-  std::shared_ptr<UICommon::GameFile> CreateMainPage();
+  FrontendResult RunMainLoop();
+  FrontendResult CreateMainPage();
   std::shared_ptr<UICommon::GameFile> CreateGameList();
 
   void CreateGeneralTab(UIState* state);

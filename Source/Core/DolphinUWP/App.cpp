@@ -1,8 +1,13 @@
 #include "Host.h"
+
 #include "UWPUtils.h"
 #include "ImGuiFrontend.h"
+#include "ImGuiNetplay.h"
+
+#include "WinRTKeyboard.h"
 
 #include <windows.h>
+#include <iostream>
 
 #include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
@@ -30,7 +35,6 @@
 #include "Core/Host.h"
 #include "Core/IOS/STM/STM.h"
 #include "Core/HotkeyManager.h"
-#include <iostream>
 
 #define SDL_MAIN_HANDLED
 
@@ -49,6 +53,10 @@ using winrt::Windows::UI::Core::BackRequestedEventArgs;
 using winrt::Windows::UI::Core::CoreProcessEventsOption;
 using winrt::Windows::UI::Core::CoreWindow;
 
+std::shared_ptr<NetPlay::NetPlayClient> g_netplay_client = nullptr;
+std::shared_ptr<NetPlay::NetPlayServer> g_netplay_server = nullptr;
+std::shared_ptr<ImGuiFrontend::ImGuiNetPlay> g_netplay_dialog = nullptr;
+
 namespace UWP
 {
 Common::Flag m_running{false};
@@ -65,6 +73,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     v.Activated({this, &App::OnActivate});
     CoreApplication::EnteredBackground({this, &App::EnteredBackground});
     CoreApplication::Suspending({this, &App::Suspending});
+   
   }
 
   void Load(hstring const&) {}
@@ -76,15 +85,28 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
         winrt::Windows::UI::Core::CoreProcessEventsOption::ProcessAllIfPresent);
 
+    auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
+    navigation.BackRequested(
+        [](const winrt::Windows::Foundation::IInspectable&,
+           const winrt::Windows::UI::Core::BackRequestedEventArgs& args) { args.Handled(true); });
+
     while (true)
     {
       // ImGUI frontend
       if (!m_running.IsSet())
       {
         auto frontend = new ImGuiFrontend::ImGuiFrontend();
-        auto game = frontend->RunUntilSelection();
+        auto result = frontend->RunUntilSelection();
+        auto game = result.game_result;
 
-        InitializeDolphinFromFile(game->GetFilePath());
+        if (game)
+        {
+          InitializeDolphinFromFile(game->GetFilePath());
+        }
+        else if (result.netplay)
+        {
+          InitializeDolphinForNetplay();
+        }
       }
 
       g_tried_graceful_shutdown.Clear();
@@ -151,6 +173,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     }
   }
 
+  void InitializeDolphinForNetplay() {
+    m_running.Set();
+  }
+
   winrt::fire_and_forget InitializeDolphinFromFile(std::string path)
   {
     if (path.empty())
@@ -186,13 +212,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     wsi.render_width = window.Bounds().Width;
     wsi.render_height = window.Bounds().Height;
 
-    auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
-
-    // UWP on Xbox One triggers a back request whenever the B button is pressed
-    // which can result in the app being suspended if unhandled
-    navigation.BackRequested([](const winrt::Windows::Foundation::IInspectable&,
-                                const BackRequestedEventArgs& args) { args.Handled(true); });
-
     GAMING_DEVICE_MODEL_INFORMATION info = {};
     GetGamingDeviceModelInformation(&info);
     if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
@@ -210,9 +229,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::unique_ptr<BootParameters> boot =
         BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
 
-    UICommon::SetUserDirectory(GetUserLocation());
-    UICommon::CreateDirectories();
-    UICommon::Init();
     UICommon::InitControllers(wsi);
 
     if (!BootManager::BootCore(std::move(boot), wsi))
@@ -222,8 +238,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     m_running.Set();
   }
-
-  void SetWindow(CoreWindow const& w) { w.Closed({this, &App::OnClosed}); }
 
   void OnClosed(const IInspectable&, const winrt::Windows::UI::Core::CoreWindowEventArgs& args)
   {
@@ -305,6 +319,18 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
           CoreApplication::Exit();
         });
       }
+    }
+
+    void OnCharacterReceived(winrt::Windows::UI::Core::CoreWindow const& /* sender */,
+                        winrt::Windows::UI::Core::CharacterReceivedEventArgs const& e /* args */)
+    {
+      UWP::HandleCharacter(e.KeyCode());
+    }
+
+    void SetWindow(CoreWindow const& w)
+    {
+      w.Closed({this, &App::OnClosed});
+      w.CharacterReceived({this, &App::OnCharacterReceived});
     }
   };
 }

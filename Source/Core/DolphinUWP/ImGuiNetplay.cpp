@@ -1,0 +1,627 @@
+#include "ImGuiNetPlay.h"
+#include "UWPUtils.h"
+#include "WinRTKeyboard.h"
+
+#include <winrt/Windows.UI.Core.h>
+#include <winrt/Windows.ApplicationModel.Core.h>
+#include <winrt/Windows.Foundation.h>
+#include <winrt/windows.graphics.display.core.h>
+#include <winrt/windows.gaming.input.h>
+#include <windows.applicationmodel.h>
+#include <gamingdeviceinformation.h>
+
+#include "Host.h"
+
+#include "Core/Core.h"
+#include "Core/Boot/Boot.h"
+#include "Core/BootManager.h"
+#include "Core/Config/NetplaySettings.h"
+#include "Core/SyncIdentifier.h"
+
+#include "Common/WindowSystemInfo.h"
+
+#include "UICommon/GameFile.h"
+#include "UICommon/UICommon.h"
+
+#include "imgui.h"
+#include <VideoCommon/NetPlayChatUI.h>
+#include <VideoCommon/OnScreenDisplay.h>
+
+using winrt::Windows::UI::Core::CoreWindow;
+using namespace winrt;
+
+namespace ImGuiFrontend
+{
+NetPlayDrawResult result = NetPlayDrawResult::Continue;
+
+NetPlay::SyncIdentifier m_current_game_identifier;
+std::shared_ptr<const UICommon::GameFile> m_host_selected_game = nullptr;
+bool m_traversal = false;
+char m_nick_buf[32];
+char m_host_buf[32];
+std::string m_warning_text;
+bool m_prompt_warning = false;
+
+ImGuiNetPlay::ImGuiNetPlay(ImGuiFrontend* frontend, std::vector<std::shared_ptr<UICommon::GameFile>> games, float frame_scale)
+    : m_frontend(frontend), m_games(games), m_frameScale(frame_scale)
+{
+  std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
+  strcpy(m_nick_buf, nickname.data());
+
+  std::string type = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
+  std::string address = Config::Get(type == "traversal" ? Config::NETPLAY_HOST_CODE :
+                                        Config::NETPLAY_ADDRESS);
+  strcpy(m_host_buf, address.data());
+}
+
+void ImGuiNetPlay::DrawLobby()
+{
+  ImGui::SetNextWindowSize(ImVec2(540 * m_frameScale, 425 * m_frameScale));
+  ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - (540 / 2) * m_frameScale,
+                                 ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
+
+  if (ImGui::Begin("Netplay Lobby"))
+  {
+    if (g_netplay_server != nullptr)
+    {
+      std::string address;
+      if (m_traversal)
+      {
+        const auto host_id = g_TraversalClient->GetHostID();
+        address = g_TraversalClient->IsConnected() ? std::string(host_id.begin(), host_id.end()) :
+                                                     "Connecting..";
+      }
+      else
+      {
+        address = g_netplay_server->GetInterfaceHost("External");
+      }
+
+      ImGui::Text(m_traversal ? "Lobby Code: %s" : "External IP: %s", address);
+    }
+
+    auto game = FindGameFile(m_current_game_identifier);
+    if (game)
+    {
+      ImGui::Text("Selected Game: %s", game->GetName(m_frontend->m_title_database).c_str());
+    }
+    ImGui::Spacing();
+
+    if (ImGui::BeginTable("players", 2))
+    {
+      ImGui::TableSetupColumn("Player");
+      ImGui::TableSetupColumn("Latency");
+      ImGui::TableHeadersRow();
+      for (auto& player : g_netplay_client->GetPlayers())
+      {
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", player->name.c_str());
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", player->ping);
+      }
+
+      ImGui::EndTable();
+    }
+
+    ImGui::Spacing();
+
+    if (g_netplay_server != nullptr)
+    {
+      int pad_buffer = Config::Get(Config::NETPLAY_BUFFER_SIZE);
+      if (ImGui::InputInt("Pad Buffer", &pad_buffer))
+      {
+        Config::SetBaseOrCurrent(Config::NETPLAY_BUFFER_SIZE, pad_buffer);
+      }
+
+      if (ImGui::Button("Start Game"))
+      {
+        if (g_netplay_server->RequestStartGame())
+        {
+          ImGui::End();
+          return;
+        }
+      }
+
+      ImGui::SameLine();
+    }
+
+    if (ImGui::Button("Exit Lobby"))
+    {
+      g_netplay_client = nullptr;
+      g_netplay_server = nullptr;
+    }
+
+    if (m_prompt_warning)
+    {
+      m_prompt_warning = false;
+      ImGui::OpenPopup("Warning");
+    }
+
+    if (ImGui::BeginPopupModal("Warning"))
+    {
+      ImGui::Text(m_warning_text.c_str());
+      ImGui::Separator();
+      if (ImGui::Button("OK"))
+      {
+        ImGui::CloseCurrentPopup();
+      }
+
+      ImGui::EndPopup();
+    }
+
+    ImGui::End();
+  }
+}
+
+void ImGuiNetPlay::DrawSetup()
+{
+  constexpr auto Warning = [](const char* text) {
+    m_warning_text = std::string(text);
+    ImGui::OpenPopup("Warning");
+  };
+
+  ImGui::SetNextWindowSize(ImVec2(540 * m_frameScale, 425 * m_frameScale));
+  ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - (540 / 2) * m_frameScale,
+                                 ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
+
+  if (ImGui::Begin("Netplay", nullptr,
+                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
+  {
+    std::string type = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
+    m_traversal = type == "traversal";
+
+    if (ImGui::BeginCombo("Connection Type", type.c_str()))
+    {
+      if (ImGui::Selectable("Direct Connection", type == "direct"))
+      {
+        Config::SetBaseOrCurrent(Config::NETPLAY_TRAVERSAL_CHOICE, "direct");
+        Config::Save();
+      }
+
+      if (ImGui::Selectable("Traversal Server", type == "traversal"))
+      {
+        Config::SetBaseOrCurrent(Config::NETPLAY_TRAVERSAL_CHOICE, "traversal");
+        Config::Save();
+      }
+
+      ImGui::EndCombo();
+    }
+
+    if (ImGui::Button("Set Nickname"))
+    {
+      UWP::ShowKeyboard();
+      ImGui::SetKeyboardFocusHere();
+    }
+    ImGui::SameLine();
+    if (ImGui::InputText("##nickname", m_nick_buf, 32))
+    {
+      printf(m_nick_buf);
+    }
+
+    ImGui::Spacing();
+
+    ImGui::BeginTabBar("#connectionTabs");
+    if (ImGui::BeginTabItem("Connect"))
+    {
+      if (ImGui::Button(m_traversal ? "Set Host Code " : "Set Host IP"))
+      {
+        UWP::ShowKeyboard();
+        ImGui::SetKeyboardFocusHere();
+      }
+      ImGui::SameLine();
+      ImGui::InputText("##address", m_host_buf, 32);
+
+
+      if (ImGui::Button("Connect"))
+      {
+        int nick_len = strlen(m_nick_buf);
+        int host_len = strlen(m_host_buf);
+        if (nick_len == 0)
+        {
+          Warning("Please enter a valid nickname!");
+        }
+        else if (host_len == 0)
+        {
+          Warning("Please enter a valid IP address / host code!");
+        }
+        else
+        {
+          Config::SetBaseOrCurrent(Config::NETPLAY_NICKNAME, std::string(m_nick_buf));
+          Config::Save();
+
+          Config::SetBaseOrCurrent(m_traversal ? Config::NETPLAY_HOST_CODE :
+                                                 Config::NETPLAY_ADDRESS,
+                                   std::string(m_host_buf));
+          Config::Save();
+
+          std::string host_ip = m_traversal ? Config::Get(Config::NETPLAY_HOST_CODE) :
+                                              Config::Get(Config::NETPLAY_ADDRESS);
+          u16 host_port = Config::Get(Config::NETPLAY_CONNECT_PORT);
+
+          const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
+          const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
+          const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
+          const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
+          const bool host_input_authority =
+              network_mode == "hostinputauthority" || network_mode == "golf";
+
+          g_netplay_client = std::make_shared<NetPlay::NetPlayClient>(
+              host_ip, host_port, this, nickname,
+              NetPlay::NetTraversalConfig{m_traversal, traversal_host, traversal_port});
+        }
+      }
+
+      if (ImGui::BeginPopupModal("Warning"))
+      {
+        ImGui::Text(m_warning_text.c_str());
+        ImGui::Separator();
+        if (ImGui::Button("OK"))
+        {
+          ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+      }
+
+      ImGui::EndTabItem();
+    }
+
+    if (ImGui::BeginTabItem("Host"))
+    {
+      if (ImGui::BeginListBox("Games List"))
+      {
+        for (auto& game : m_games)
+        {
+          if (ImGui::Selectable(
+                  std::format("{}##{}", game->GetLongName(), game->GetFilePath()).c_str(),
+                                m_host_selected_game == game))
+          {
+            m_host_selected_game = game;
+          }
+        }
+
+        ImGui::EndListBox();
+      }
+
+      if (!m_traversal)
+      {
+        int port = static_cast<int>(Config::Get(Config::NETPLAY_HOST_PORT));
+        if (ImGui::InputInt("Host Port", &port))
+        {
+          Config::SetBaseOrCurrent(Config::NETPLAY_HOST_PORT, static_cast<u16>(port));
+          Config::Save();
+        }
+      }
+
+      if (ImGui::Button("Host Lobby"))
+      {
+        int nick_len = strlen(m_nick_buf);
+        if (nick_len == 0)
+        {
+          Warning("Please enter a valid nickname!");
+        }
+        else if (m_host_selected_game == nullptr)
+        {
+          Warning("Please select a game!");
+        }
+        else
+        {
+          Config::SetBaseOrCurrent(Config::NETPLAY_NICKNAME, std::string(m_nick_buf));
+          Config::Save();
+
+          // Settings
+          u16 host_port = Config::Get(Config::NETPLAY_HOST_PORT);
+          const std::string traversal_choice = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
+          const bool is_traversal = traversal_choice == "traversal";
+          const bool use_upnp = Config::Get(Config::NETPLAY_USE_UPNP);
+
+          const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
+          const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
+
+          if (is_traversal)
+            host_port = Config::Get(Config::NETPLAY_LISTEN_PORT);
+
+          // Create Server
+          g_netplay_server = std::make_shared<NetPlay::NetPlayServer>(
+              host_port, use_upnp, this,
+              NetPlay::NetTraversalConfig{is_traversal, traversal_host, traversal_port});
+
+          if (!g_netplay_server->is_connected)
+          {
+            Warning("Could not create the netplay server. Is the port already in use?");
+            g_netplay_server = nullptr;
+          }
+          else
+          {
+            g_netplay_server->ChangeGame(m_host_selected_game->GetSyncIdentifier(),
+                                         m_host_selected_game->GetLongName());
+
+            std::string host_ip = "127.0.0.1";
+
+            const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
+            const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
+            const bool host_input_authority =
+                network_mode == "hostinputauthority" || network_mode == "golf";
+
+            g_netplay_client = std::make_shared<NetPlay::NetPlayClient>(
+                host_ip, host_port, this, nickname,
+                NetPlay::NetTraversalConfig{false, traversal_host, traversal_port});
+          }
+        }
+      }
+
+      if (ImGui::BeginPopupModal("Warning"))
+      {
+        ImGui::Text(m_warning_text.c_str());
+        ImGui::Separator();
+        if (ImGui::Button("OK"))
+        {
+          ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+      }
+
+      ImGui::EndTabItem();
+    }
+
+    ImGui::EndTabBar();
+    ImGui::End();
+  }
+}
+
+NetPlayDrawResult ImGuiNetPlay::Draw()
+{
+  if (g_netplay_client)
+  {
+    DrawLobby();
+  }
+  else
+  {
+    DrawSetup();
+  }
+
+  return result;
+}
+
+void ImGuiNetPlay::BootGame(const std::string& filename,
+                            std::unique_ptr<BootSessionData> boot_session_data) {
+  CoreApplication::MainView().Dispatcher().RunAsync(
+      winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
+      [filename, data = std::move(boot_session_data)] {
+        // Todo, proper synchronisation
+        Sleep(100); // avoid a race condition where we initialise before the frontend closes
+
+        CoreWindow window = CoreWindow::GetForCurrentThread();
+        void* abi = winrt::get_abi(window);
+
+        WindowSystemInfo wsi;
+        wsi.type = WindowSystemType::UWP;
+        wsi.render_surface = abi;
+        wsi.render_width = window.Bounds().Width;
+        wsi.render_height = window.Bounds().Height;
+
+        GAMING_DEVICE_MODEL_INFORMATION info = {};
+        GetGamingDeviceModelInformation(&info);
+        if (info.vendorId == GAMING_DEVICE_VENDOR_ID_MICROSOFT)
+        {
+          winrt::Windows::Graphics::Display::Core::HdmiDisplayInformation hdi =
+              winrt::Windows::Graphics::Display::Core::HdmiDisplayInformation::GetForCurrentView();
+
+          if (hdi)
+          {
+            wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
+            wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
+            // Our UI is based on 1080p, and we're adding a modifier to zoom in by 80%
+            wsi.render_surface_scale = ((float)wsi.render_width / 1920.0f) * 1.8f;
+          }
+        }
+
+        std::unique_ptr<BootParameters> boot =
+            BootParameters::GenerateFromFile(filename, std::move(*data));
+
+        UICommon::InitControllers(wsi);
+
+        if (!BootManager::BootCore(std::move(boot), wsi))
+        {
+          fprintf(stderr, "Could not boot the specified file\n");
+        }
+    });
+
+  result = NetPlayDrawResult::BootGame;
+};
+
+void ImGuiNetPlay::DisplayMessage(std::string msg, int duration, float r, float g, float b)
+{
+  if (g_ActiveConfig.bShowNetPlayMessages && Core::IsRunning())
+    g_netplay_chat_ui->AppendChat(msg, {r, g, b});
+}
+
+void ImGuiNetPlay::Reset()
+{
+  result = NetPlayDrawResult::Continue;
+}
+
+void ImGuiNetPlay::StopGame()
+{
+
+}
+
+bool ImGuiNetPlay::IsHosting() const
+{
+  return g_netplay_server != nullptr;
+}
+
+void ImGuiNetPlay::Update()
+{
+}
+
+void ImGuiNetPlay::AppendChat(const std::string& msg)
+{
+}
+
+void ImGuiNetPlay::OnMsgChangeGame(const NetPlay::SyncIdentifier& sync_identifier,
+                                   const std::string& netplay_name)
+{
+  m_current_game_identifier = sync_identifier;
+}
+
+void ImGuiNetPlay::OnMsgChangeGBARom(int pad, const NetPlay::GBAConfig& config)
+{
+}
+
+void ImGuiNetPlay::OnMsgStartGame()
+{
+  g_netplay_chat_ui =
+      std::make_unique<NetPlayChatUI>([this](const std::string& message) {});
+
+  auto game = FindGameFile(m_current_game_identifier);
+  if (game)
+  {
+    g_netplay_client->StartGame(game->GetFilePath());
+  }
+  else
+  {
+    m_warning_text = "Could not find the selected game.";
+    m_prompt_warning = true;
+  }
+}
+
+void ImGuiNetPlay::OnMsgStopGame()
+{
+  g_netplay_client->StopGame();
+
+  if (Core::IsRunningAndStarted()) {
+    UWP::g_shutdown_requested.Set();
+  }
+}
+
+void ImGuiNetPlay::OnMsgPowerButton()
+{
+
+}
+
+void ImGuiNetPlay::OnPlayerConnect(const std::string& player)
+{
+}
+
+void ImGuiNetPlay::OnPlayerDisconnect(const std::string& player)
+{
+}
+
+void ImGuiNetPlay::OnPadBufferChanged(u32 buffer)
+{
+}
+
+void ImGuiNetPlay::OnHostInputAuthorityChanged(bool enabled)
+{
+}
+
+void ImGuiNetPlay::OnDesync(u32 frame, const std::string& player)
+{
+  DisplayMessage("Possible desync detected.", OSD::Duration::VERY_LONG, 1.0f, 0.0f, 0.0f);
+}
+
+void ImGuiNetPlay::OnConnectionLost()
+{
+}
+
+void ImGuiNetPlay::OnConnectionError(const std::string& message)
+{
+  m_warning_text = std::string(message);
+  m_prompt_warning = true;
+
+  g_netplay_client = nullptr;
+}
+
+void ImGuiNetPlay::OnTraversalError(TraversalClient::FailureReason error)
+{
+}
+
+void ImGuiNetPlay::OnTraversalStateChanged(TraversalClient::State state)
+{
+}
+
+void ImGuiNetPlay::OnGameStartAborted()
+{
+
+}
+
+void ImGuiNetPlay::OnGolferChanged(bool is_golfer,
+                                   const std::string& golfer_name)
+{
+}
+
+bool ImGuiNetPlay::IsRecording()
+{
+  return false;
+}
+
+std::shared_ptr<const UICommon::GameFile>
+ImGuiNetPlay::FindGameFile(const NetPlay::SyncIdentifier& sync_identifier,
+             NetPlay::SyncIdentifierComparison* found)
+{
+  NetPlay::SyncIdentifierComparison temp;
+  if (!found)
+    found = &temp;
+
+  *found = NetPlay::SyncIdentifierComparison::DifferentGame;
+
+  for (auto& game : m_games)
+  {
+    *found = std::min(*found, game->CompareSyncIdentifier(sync_identifier));
+    if (*found == NetPlay::SyncIdentifierComparison::SameGame)
+      return game;
+  }
+  
+  return nullptr;
+}
+
+std::string ImGuiNetPlay::FindGBARomPath(const std::array<u8, 20>& hash, std::string_view title,
+                           int device_number)
+{
+  return "";
+}
+
+void ImGuiNetPlay::ShowGameDigestDialog(const std::string& title)
+{
+}
+
+void ImGuiNetPlay::SetGameDigestProgress(int pid, int progress)
+{
+}
+
+void ImGuiNetPlay::SetGameDigestResult(int pid, const std::string& result)
+{
+}
+
+void ImGuiNetPlay::AbortGameDigest()
+{
+}
+
+void ImGuiNetPlay::OnIndexAdded(bool success, std::string error)
+{
+}
+
+void ImGuiNetPlay::OnIndexRefreshFailed(std::string error)
+{
+}
+
+void ImGuiNetPlay::ShowChunkedProgressDialog(const std::string& title, u64 data_size,
+                                             const std::vector<int>& players)
+{
+}
+
+void ImGuiNetPlay::HideChunkedProgressDialog()
+{
+}
+
+void ImGuiNetPlay::SetChunkedProgress(int pid, u64 progress)
+{
+}
+
+void ImGuiNetPlay::SetHostWiiSyncData(std::vector<u64> titles, std::string redirect_folder)
+{
+}
+
+}  // namespace ImGuiFrontend

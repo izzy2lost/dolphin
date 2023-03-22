@@ -64,7 +64,9 @@ const std::string& GetScmUpdateTrackStr()
 
 const std::string& GetNetplayDolphinVer()
 {
-#ifdef _WIN32
+#ifdef _UWP
+  static const std::string netplay_dolphin_ver = SCM_DESC_STR " Xbox";
+#elif _WIN32
   static const std::string netplay_dolphin_ver = SCM_DESC_STR " Win";
 #elif __APPLE__
   static const std::string netplay_dolphin_ver = SCM_DESC_STR " Mac";

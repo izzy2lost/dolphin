@@ -272,7 +272,7 @@
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;_UWP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;$(ExternalsDir)imgui;$(ExternalsDir)picojson;$(ExternalsDir)implot;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|x64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;$(ExternalsDir)imgui;$(ExternalsDir)picojson;$(ExternalsDir)implot;$(ExternalsDir)SFML\include;$(ExternalsDir)enet\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|ARM64'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release UWP|Win32'">$(ExternalsDir)fmt\include;$(ExternalsDir)SDL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -308,8 +308,10 @@
     <ClInclude Include="DXHelper.h" />
     <ClInclude Include="Host.h" />
     <ClInclude Include="ImGuiFrontend.h" />
+    <ClInclude Include="ImGuiNetplay.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="UWPUtils.h" />
+    <ClInclude Include="WinRTKeyboard.h" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -331,12 +333,20 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="D3DWindow.cpp" />
     <ClCompile Include="ImGuiFrontend.cpp" />
+    <ClCompile Include="ImGuiNetplay.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="WinRTKeyboard.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="DolphinUWP_TemporaryKey.pfx" />
+    <None Include="libgallium_wgl.dll">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="opengl32.dll">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="packages.config" />
     <None Include="PropertySheet.props" />
     <None Include="Sys\codehandler.bin">
@@ -5080,6 +5090,9 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="Sys\Wii\shared2\wc24\nwc24msg.cfg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="z.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>

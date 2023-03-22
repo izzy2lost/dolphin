@@ -9,8 +9,13 @@
 #pragma once
 
 #include "ImGuiFrontend.h"
+
 #include "D3DWindow.h"
 #include "UWPUtils.h"
+#include "Host.h"
+
+#include "ImGuiNetplay.h"
+#include "WinRTKeyboard.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -40,10 +45,15 @@
 #include <wil/com.h>
 
 #include "Core/Config/MainSettings.h"
+#include "Core/Config/NetplaySettings.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/SYSCONFSettings.h"
 #include "Core/TitleDatabase.h"
 #include "Core/HW/EXI/EXI_Device.h"
+#include "Core/NetPlayClient.h"
+#include "Core/NetPlayProto.h"
+#include "Core/NetPlayServer.h"
+#include "Core/ConfigManager.h"
 
 #include "Common/FileUtil.h"
 #include "Common/Image.h"
@@ -69,6 +79,7 @@ public:
   bool controlsDisabled = false;
   bool showSettingsWindow = false;
   bool menuPressed = false;
+  bool netplayPressed = false;
   std::string selectedPath;
 };
 
@@ -77,7 +88,6 @@ D3DWindow m_d3dWnd;
 std::shared_ptr<ciface::Core::Device> m_controller = nullptr;
 std::vector<std::string> m_paths;
 std::vector<std::shared_ptr<UICommon::GameFile>> m_games;
-Core::TitleDatabase m_title_database;
 std::unordered_map<std::string, ID3D11ShaderResourceView*> m_cover_textures;
 u64 m_imgui_last_frame_time;
 
@@ -100,8 +110,9 @@ ImGuiFrontend::ImGuiFrontend()
   m_d3dWnd.InitImGui();
 
   ImGuiIO& io = ImGui::GetIO();
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
   io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+  io.KeyMap[ImGuiKey_Backspace] = '\b';
 
   ImGui::StyleColorsDark();
 
@@ -273,15 +284,21 @@ void ImGuiFrontend::RefreshControls(bool updateGameSelection)
   }
 }
 
-std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunUntilSelection()
+FrontendResult ImGuiFrontend::RunUntilSelection()
 {
   return RunMainLoop();
 }
 
-std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
+FrontendResult ImGuiFrontend::RunMainLoop()
 {
-  std::shared_ptr<UICommon::GameFile> selection;
+  FrontendResult selection;
   UIState state = UIState();
+
+  if (g_netplay_dialog)
+  {
+    // Reset for if we're exiting a game into netplay again
+    g_netplay_dialog->Reset();
+  }
 
   // Main loop
   bool done = false;
@@ -301,14 +318,49 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
         {
           state.showSettingsWindow = !state.showSettingsWindow;
           state.menuPressed = true;
+          LoadGameList();   
         }
+      }
+      else if (m_controller->FindInput("Button X")->GetState() == 1.0f)
+      {
+        if (!state.netplayPressed)
+        {
+          if (g_netplay_dialog)
+          {
+            g_netplay_client = nullptr;
+            g_netplay_server = nullptr;
+            g_netplay_dialog = nullptr;
+          }
+          else
+          {
+            g_netplay_dialog = std::make_shared<ImGuiNetPlay>(this, m_games, m_frameScale);
+          }
 
-        LoadGameList();   
+          state.netplayPressed = true;
+        }
       }
       else
       {
         state.menuPressed = false;
+        state.netplayPressed = false;
       }
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.KeysDown[0x08] = false;
+
+    {
+      std::unique_lock lk(UWP::g_buffer_mutex);
+      for (uint32_t c : UWP::g_char_buffer)
+      {
+        io.AddInputCharacter(c);
+
+        if (c == '\b')
+        {
+          io.KeysDown[0x08] = true;
+        }
+      }
+      UWP::g_char_buffer.clear();
     }
 
     ImGui_ImplDX11_NewFrame();
@@ -333,15 +385,21 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
     ImGui::PopStyleVar(3);
     // -- Background
 
-    auto navigation = winrt::Windows::UI::Core::SystemNavigationManager::GetForCurrentView();
-
-    if (state.showSettingsWindow)
+    if (g_netplay_dialog != nullptr)
     {
-      // Disable the back button while in a popup
-      navigation.BackRequested(
-          [](const winrt::Windows::Foundation::IInspectable&,
-             const winrt::Windows::UI::Core::BackRequestedEventArgs& args) { args.Handled(true); });
-
+      auto result = g_netplay_dialog->Draw();
+      if (result == BootGame)
+      {
+        selection.netplay = true;
+        break;
+      }
+      else if (result == ExitNetplay)
+      {
+        g_netplay_dialog = nullptr;
+      }
+    }
+    else if (state.showSettingsWindow)
+    {
       ImGui::SetNextWindowSize(ImVec2(540 * m_frameScale, 425 * m_frameScale));
       ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - (540 / 2) * m_frameScale,
                                          ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
@@ -399,11 +457,8 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::RunMainLoop()
     }
     else
     {
-      // Re-enable the Back button.
-      navigation.BackRequested([](const winrt::Windows::Foundation::IInspectable&,
-                                  const winrt::Windows::UI::Core::BackRequestedEventArgs& args) {});
       selection = CreateMainPage();
-      if (selection != nullptr)
+      if (selection.game_result != nullptr || selection.netplay)
       {
         break;
       }
@@ -1109,8 +1164,149 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
   ImGui::TextWrapped("Note: Please remember to do your USB filesystem setup, or paths to "
                      "your USB will not work properly!");
 }
+//
+//void ImGuiFrontend::CreateNetplaySetupWindow(UIState* state)
+//{
+//  if (ImGui::Begin("Netplay", nullptr,
+//                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+//                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
+//  {
+//    std::string type = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
+//    bool is_traversal = type == "traversal";
+//
+//    if (ImGui::BeginCombo("Connection Type", type.c_str()))
+//    {
+//      if (ImGui::Selectable("Direct Connection", type == "direct")) {
+//        Config::SetBaseOrCurrent(Config::NETPLAY_TRAVERSAL_CHOICE, "direct");
+//        Config::Save();
+//      }
+//
+//      if (ImGui::Selectable("Traversal Server", type == "traversal"))
+//      {
+//        Config::SetBaseOrCurrent(Config::NETPLAY_TRAVERSAL_CHOICE, "traversal");
+//        Config::Save();
+//      }
+//    }
+//
+//    // Todo, popup keyboard
+//    std::string netplay_nickname = Config::Get(Config::NETPLAY_NICKNAME);
+//    std::vector<char> nick_buf(netplay_nickname.size());
+//
+//    if (ImGui::InputText("Nickname", nick_buf.data(), 16))
+//    {
+//      Config::SetBaseOrCurrent(Config::NETPLAY_NICKNAME, std::string(nick_buf.data()));
+//      Config::Save();
+//    }
+//
+//    ImGui::BeginTabBar("#connectionTabs");
+//    if (ImGui::BeginTabItem("Connect"))
+//    {
+//      std::string host_ip = is_traversal ? Config::Get(Config::NETPLAY_HOST_CODE) :
+//                               Config::Get(Config::NETPLAY_ADDRESS);
+//
+//      std::vector<char> host_buf(32);
+//
+//      if (ImGui::InputText(is_traversal ? "Host Code" : "Host IP", host_buf.data(), 32))
+//      {
+//        Config::SetBaseOrCurrent(is_traversal ? Config::NETPLAY_HOST_CODE : Config::NETPLAY_ADDRESS, std::string(host_buf.data()));
+//        Config::Save();
+//      }
+//
+//      if (ImGui::Button("Connect"))
+//      {
+//        std::string host_ip = is_traversal ? Config::Get(Config::NETPLAY_HOST_CODE) :
+//                                 Config::Get(Config::NETPLAY_ADDRESS);
+//        u16 host_port = Config::Get(Config::NETPLAY_CONNECT_PORT);
+//
+//        const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
+//        const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
+//        const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
+//        const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
+//        const bool host_input_authority =
+//            network_mode == "hostinputauthority" || network_mode == "golf";
+//
+//        netplay_dialog = new ImGuiNetPlay();
+//        netplay_client = new NetPlay::NetPlayClient(
+//            host_ip, host_port, netplay_dialog, nickname,
+//            NetPlay::NetTraversalConfig{is_traversal, traversal_host,
+//                                        traversal_port});
+//      }
+//      
+//      ImGui::EndTabItem();
+//    }
+//
+//    if (ImGui::BeginTabItem("Host"))
+//    {
+//      std::shared_ptr<const UICommon::GameFile> selected_game = nullptr;
+//      if (ImGui::BeginListBox("Games List"))
+//      {
+//        for (auto& game : m_games)
+//        {
+//          if (ImGui::Selectable(game->GetLongName().c_str(), selected_game == game))
+//          {
+//            selected_game = game;
+//          }
+//        }
+//
+//        ImGui::EndListBox();
+//      }
+//      
+//      // Settings
+//      u16 host_port = Config::Get(Config::NETPLAY_HOST_PORT);
+//      const std::string traversal_choice = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
+//      const bool is_traversal = traversal_choice == "traversal";
+//      const bool use_upnp = Config::Get(Config::NETPLAY_USE_UPNP);
+//
+//      const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
+//      const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
+//
+//      if (is_traversal)
+//        host_port = Config::Get(Config::NETPLAY_LISTEN_PORT);
+//
+//      // Create Server
+//      netplay_dialog = new ImGuiNetPlay();
+//      netplay_server = new NetPlay::NetPlayServer(
+//          host_port, use_upnp, netplay_dialog,
+//          NetPlay::NetTraversalConfig{is_traversal, traversal_host, traversal_port});
+//
+//      //if (!Settings::Instance().GetNetPlayServer()->is_connected)
+//      //{
+//      //  ModalMessageBox::critical(
+//      //      nullptr, tr("Failed to open server"),
+//      //      tr("Failed to listen on port %1. Is another instance of the NetPlay server running?")
+//      //          .arg(host_port));
+//      //  NetPlayQuit();
+//      //  return false;
+//      //}
+//
+//      netplay_server->ChangeGame(selected_game->GetSyncIdentifier(), selected_game->GetLongName());
+//
+//      std::string host_ip = "127.0.0.1";
+//      u16 host_port = netplay_server->GetPort();
+//
+//      const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
+//      const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
+//      const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
+//      const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
+//      const bool host_input_authority =
+//          network_mode == "hostinputauthority" || network_mode == "golf";
+//
+//      netplay_dialog = new ImGuiNetPlay();
+//      netplay_client = new NetPlay::NetPlayClient(
+//          host_ip, host_port, netplay_dialog, nickname,
+//          NetPlay::NetTraversalConfig{is_traversal, traversal_host, traversal_port});
+//
+//      ImGui::EndTabItem();
+//    }
+//
+//    ImGui::EndTabBar();
+//
+//    ImGui::EndTabBar();
+//    ImGui::End();
+//  }
+//}
 
-std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateMainPage()
+FrontendResult ImGuiFrontend::CreateMainPage()
 {
   //float selOffset = m_selectedGameIdx >= 5 ? 160.0f * (m_selectedGameIdx - 4) * -1.0f : 0;
   float posX = 30 * m_frameScale;
@@ -1129,7 +1325,7 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateMainPage()
     ImGui::End();
     if (game != nullptr)
     {
-      return game;
+      return FrontendResult(game);
     }
   }
 
@@ -1142,7 +1338,7 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateMainPage()
   ImGuiIO& io = ImGui::GetIO();
   io.DeltaTime = time_diff_secs;
 
-  return nullptr; // keep running
+  return FrontendResult(); // keep running
 }
 
 std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateGameList()
@@ -1345,7 +1541,7 @@ void ImGuiFrontend::LoadGameList()
   RecurseFolder(localCachePath);
 
   std::sort(m_games.begin(), m_games.end(),
-          [](std::shared_ptr<UICommon::GameFile> first,
+          [this](std::shared_ptr<UICommon::GameFile> first,
                    std::shared_ptr<UICommon::GameFile> second) {
           return first->GetName(m_title_database) < second->GetName(m_title_database);
   });
