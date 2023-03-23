@@ -2,6 +2,9 @@
 #include "UWPUtils.h"
 #include "WinRTKeyboard.h"
 
+#include <algorithm>
+#include <cctype>
+
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/Windows.Foundation.h>
@@ -39,8 +42,12 @@ std::shared_ptr<const UICommon::GameFile> m_host_selected_game = nullptr;
 bool m_traversal = false;
 char m_nick_buf[32];
 char m_host_buf[32];
+char m_search_buf[32];
 std::string m_warning_text;
 bool m_prompt_warning = false;
+
+std::string m_prev_search;
+std::vector<std::shared_ptr<UICommon::GameFile>> m_search_results;
 
 ImGuiNetPlay::ImGuiNetPlay(ImGuiFrontend* frontend, std::vector<std::shared_ptr<UICommon::GameFile>> games, float frame_scale)
     : m_frontend(frontend), m_games(games), m_frameScale(frame_scale)
@@ -110,6 +117,8 @@ void ImGuiNetPlay::DrawLobby()
       if (ImGui::InputInt("Pad Buffer", &pad_buffer))
       {
         Config::SetBaseOrCurrent(Config::NETPLAY_BUFFER_SIZE, pad_buffer);
+        Config::Save();
+        g_netplay_server->AdjustPadBufferSize(static_cast<unsigned int>(pad_buffer));
       }
 
       if (ImGui::Button("Start Game"))
@@ -147,6 +156,10 @@ void ImGuiNetPlay::DrawLobby()
 
       ImGui::EndPopup();
     }
+
+    ImGui::Dummy(ImVec2(0.0f, 25.0f));
+    ImGui::Separator();
+    ImGui::TextWrapped("Please note that Xbox NetPlay is still early and may not show all notifications for various things such as synchronising memory cards, and waiting for client's games to start (e.g Compile Shaders Before Starting).\nThis may appear as a black screen until the game boots.");
 
     ImGui::End();
   }
@@ -270,7 +283,40 @@ void ImGuiNetPlay::DrawSetup()
     {
       if (ImGui::BeginListBox("Games List"))
       {
-        for (auto& game : m_games)
+        int search = strlen(m_search_buf);
+        std::vector<std::shared_ptr<UICommon::GameFile>> games;
+        if (search > 0)
+        {
+          std::string search_phrase = std::string(m_search_buf);
+          if (search_phrase != m_prev_search)
+          {
+            m_search_results.clear();
+            for (auto& game : m_games)
+            {
+              auto& name = game->GetLongName();
+              auto it = std::search(name.begin(), name.end(), search_phrase.begin(),
+                                    search_phrase.end(),
+                                    [](unsigned char ch1, unsigned char ch2) {
+                                      return std::toupper(ch1) == std::toupper(ch2);
+                                    });
+
+              if (it != name.end())
+              {
+                m_search_results.push_back(game);
+              }
+            }
+
+            m_prev_search = m_search_buf;
+          }
+
+          games = m_search_results;
+        }
+        else
+        {
+          games = m_games;
+        }
+
+        for (auto& game : games)
         {
           if (ImGui::Selectable(
                   std::format("{}##{}", game->GetLongName(), game->GetFilePath()).c_str(),
@@ -281,6 +327,30 @@ void ImGuiNetPlay::DrawSetup()
         }
 
         ImGui::EndListBox();
+      }
+
+      if (ImGui::Button("Search Game"))
+      {
+        UWP::ShowKeyboard();
+        ImGui::SetKeyboardFocusHere();
+      }
+      ImGui::SameLine();
+      ImGui::InputText("##gamesearch", m_search_buf, 32);
+
+      ImGui::Spacing();
+
+      bool strict_sync = Config::Get(Config::NETPLAY_STRICT_SETTINGS_SYNC);
+      if (ImGui::Checkbox("Strict Settings Synchronisation", &strict_sync))
+      {
+        Config::SetBaseOrCurrent(Config::NETPLAY_STRICT_SETTINGS_SYNC, strict_sync);
+        Config::Save();
+      }
+
+      bool upnp = Config::Get(Config::NETPLAY_USE_UPNP);
+      if (ImGui::Checkbox("Use UPNP", &upnp))
+      {
+        Config::SetBaseOrCurrent(Config::NETPLAY_USE_UPNP, upnp);
+        Config::Save();
       }
 
       if (!m_traversal)
@@ -444,7 +514,12 @@ void ImGuiNetPlay::Reset()
 
 void ImGuiNetPlay::StopGame()
 {
+  g_netplay_client->StopGame();
 
+  if (Core::IsRunningAndStarted())
+  {
+    UWP::g_shutdown_requested.Set();
+  }
 }
 
 bool ImGuiNetPlay::IsHosting() const
@@ -458,6 +533,8 @@ void ImGuiNetPlay::Update()
 
 void ImGuiNetPlay::AppendChat(const std::string& msg)
 {
+  DisplayMessage(msg, OSD::Duration::NORMAL, 1.0f, 1.0f,
+                 0.0f);
 }
 
 void ImGuiNetPlay::OnMsgChangeGame(const NetPlay::SyncIdentifier& sync_identifier,
@@ -503,10 +580,14 @@ void ImGuiNetPlay::OnMsgPowerButton()
 
 void ImGuiNetPlay::OnPlayerConnect(const std::string& player)
 {
+  DisplayMessage(std::format("Player {} has connected", player), OSD::Duration::NORMAL, 1.0f,
+                 1.0f, 0.0f);
 }
 
 void ImGuiNetPlay::OnPlayerDisconnect(const std::string& player)
 {
+  DisplayMessage(std::format("Player {} has disconnnected", player), OSD::Duration::NORMAL, 1.0f,
+    1.0f, 0.0f);
 }
 
 void ImGuiNetPlay::OnPadBufferChanged(u32 buffer)
@@ -536,6 +617,7 @@ void ImGuiNetPlay::OnConnectionError(const std::string& message)
 
 void ImGuiNetPlay::OnTraversalError(TraversalClient::FailureReason error)
 {
+  DisplayMessage("A traversal error has occurred", OSD::Duration::VERY_LONG, 1.0f, 0.0f, 0.0f);
 }
 
 void ImGuiNetPlay::OnTraversalStateChanged(TraversalClient::State state)
@@ -544,7 +626,12 @@ void ImGuiNetPlay::OnTraversalStateChanged(TraversalClient::State state)
 
 void ImGuiNetPlay::OnGameStartAborted()
 {
+  g_netplay_client->StopGame();
 
+  if (Core::IsRunningAndStarted())
+  {
+    UWP::g_shutdown_requested.Set();
+  }
 }
 
 void ImGuiNetPlay::OnGolferChanged(bool is_golfer,
