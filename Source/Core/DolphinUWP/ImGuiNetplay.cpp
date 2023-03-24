@@ -200,7 +200,7 @@ void ImGuiNetPlay::DrawSetup()
       ImGui::EndCombo();
     }
 
-    if (ImGui::Button("Set Nickname"))
+    if (ImGui::Button("Edit Nickname"))
     {
       UWP::ShowKeyboard();
       ImGui::SetKeyboardFocusHere();

@@ -111,10 +111,6 @@ char m_list_search_buf[32];
 
 ImGuiFrontend::ImGuiFrontend()
 {
-  UICommon::SetUserDirectory(UWP::GetUserLocation());
-  UICommon::CreateDirectories();
-  UICommon::Init();
-
   CoreWindow window = CoreWindow::GetForCurrentThread();
   void* abi = winrt::get_abi(window);
 
@@ -160,6 +156,8 @@ ImGuiFrontend::ImGuiFrontend()
   }
 
   g_controller_interface.Initialize({});
+
+  ImGui::GetIO().KeyMap[ImGuiKey_Backspace] = '\b';
 
   PopulateControls();
   LoadGameList();
@@ -1541,10 +1539,9 @@ AbstractTexture* ImGuiFrontend::GetOrCreateMissingTex()
   }
 
   missing_tex->Load(0, width, height, width, data.data(), sizeof(u32) * width * height);
-
   m_missing_tex = std::move(missing_tex);
 
-  return missing_tex.get();
+  return m_missing_tex.get();
 }
 
 void ImGuiFrontend::LoadGameList()

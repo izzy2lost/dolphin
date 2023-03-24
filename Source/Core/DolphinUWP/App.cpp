@@ -287,6 +287,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
       }
     }
 
+    UICommon::SetUserDirectory(UWP::GetUserLocation());
+    UICommon::CreateDirectories();
+    UICommon::Init();
+
     std::string gamePath = filePath.str();
     if (!gamePath.empty() && gamePath != "")
     {
