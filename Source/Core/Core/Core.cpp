@@ -16,6 +16,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include "VideoBackends/D3DCommon/D3DCommon.h"
 #endif
 
 #include "AudioCommon/AudioCommon.h"
@@ -531,11 +532,23 @@ static void EmuThread(std::unique_ptr<BootParameters> boot, WindowSystemInfo wsi
 
   VideoBackendBase::PopulateBackendInfo();
 
-  if (!g_video_backend->Initialize(wsi))
+  if (!g_video_backend)
   {
-    PanicAlertFmt("Failed to initialize video backend!");
-    return;
+    if (!g_video_backend->Initialize(wsi))
+    {
+      PanicAlertFmt("Failed to initialize video backend!");
+      return;
+    }
   }
+  else
+  {
+    if (g_video_backend->GetName().find("D3D") != std::string::npos)
+    {
+      // Reload the libraries, as they get unloaded in the previous steps
+      D3DCommon::LoadLibraries();
+    }
+   }
+
   Common::ScopeGuard video_guard{[] { g_video_backend->Shutdown(); }};
 
   // Render a single frame without anything on it to clear the screen.

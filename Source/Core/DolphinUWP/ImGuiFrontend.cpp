@@ -451,6 +451,14 @@ FrontendResult ImGuiFrontend::RunMainLoop()
           ImGui::EndTabItem();
         }
 
+        if (ImGui::BeginTabItem("About"))
+        {
+          ImGui::TextWrapped(
+              "Dolphin Emulator UWP - Version 1.14\n\nThis fork was developed by SirMangler.\n\n"
+              "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
+          ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
         ImGui::End();
       }
@@ -1149,7 +1157,9 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
   if (ImGui::Button("Set Dolphin User Folder Location"))
   {
     state->controlsDisabled = true;
-    UWP::OpenNewUserPicker([=]() { state->controlsDisabled = false; });
+    UWP::OpenNewUserPicker([=]() {
+      state->controlsDisabled = false;
+    });
 
     // Reset everything and load the new config location.
     UICommon::Shutdown();

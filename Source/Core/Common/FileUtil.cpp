@@ -37,6 +37,10 @@
 #include <io.h>
 #include <objbase.h>  // guid stuff
 #include <shellapi.h>
+
+#ifdef _UWP
+#include "DolphinUWP/UWPUtils.h"
+#endif
 #else
 #include <dirent.h>
 #include <errno.h>
@@ -272,6 +276,23 @@ bool CreateFullPath(const std::string& fullPath)
 
     // Include the '/' so the first call is CreateDir("/") rather than CreateDir("")
     std::string const subPath(fullPath.substr(0, position + 1));
+
+#if _UWP
+    if (subPath.starts_with("Q:"))
+    {
+      auto base = std::filesystem::path(UWP::GetLocalFolder()).make_preferred().native();
+      auto sub = std::filesystem::path(subPath).make_preferred().native();
+
+      // If we're on the write-protected drive and not in our app folder, skip trying to check this
+      // exists.
+      if (sub.rfind(base) != 0)
+      {
+        position++;
+        continue;
+      }
+    }
+#endif
+
     if (!IsDirectory(subPath))
       File::CreateDir(subPath);
 

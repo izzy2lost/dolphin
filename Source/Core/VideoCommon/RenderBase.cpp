@@ -62,6 +62,7 @@
 
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
+#include "InputCommon/InputConfig.h"
 
 #include "VideoCommon/AbstractFramebuffer.h"
 #include "VideoCommon/AbstractStagingTexture.h"
@@ -1026,6 +1027,7 @@ bool Renderer::InitializeImGui()
   ImGui::GetIO().DisplayFramebufferScale.x = m_backbuffer_scale;
   ImGui::GetIO().DisplayFramebufferScale.y = m_backbuffer_scale;
   ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+  ImGui::GetIO().BackendFlags |= ImGuiBackendFlags_HasGamepad;
   ImGui::GetIO().FontGlobalScale = m_backbuffer_scale;
   ImGui::GetStyle().WindowRounding = 7.0f;
 
@@ -1160,7 +1162,7 @@ void Renderer::BeginImGuiFrameUnlocked()
   io.DeltaTime = time_diff_secs;
 
 #ifdef _UWP
-  if (g_controller_interface.HasDefaultDevice())
+  if (g_controller_interface.HasDefaultDevice() && Pad::GetConfig()->IsControllerControlledByGamepadDevice(0) && Wiimote::GetConfig()->IsControllerControlledByGamepadDevice(0))
   {
     std::vector<std::unique_ptr<ControllerEmu::Control>>* btns = nullptr;
     std::vector<std::unique_ptr<ControllerEmu::Control>>* stick = nullptr;
@@ -1177,10 +1179,6 @@ void Renderer::BeginImGuiFrameUnlocked()
       stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
     }
 
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-    io.NavVisible = true;
-
     if (btns != nullptr && stick != nullptr)
     {
       io.NavInputs[ImGuiNavInput_Activate] = btns->at(0)->GetState() == 1.0f ? 1.0 : 0;
@@ -1189,6 +1187,29 @@ void Renderer::BeginImGuiFrameUnlocked()
       io.NavInputs[ImGuiNavInput_DpadDown] = stick->at(1)->GetState() == 1.0f ? 1.0 : 0;
       io.NavInputs[ImGuiNavInput_DpadLeft] = stick->at(2)->GetState() == 1.0f ? 1.0 : 0;
       io.NavInputs[ImGuiNavInput_DpadRight] = stick->at(3)->GetState() == 1.0f ? 1.0 : 0;
+    }
+  } else {
+    // Fallback to a generic profile, which is needed for the frontend.
+    ciface::Core::DeviceQualifier dq;
+    dq.FromString(g_controller_interface.GetDefaultDeviceString());
+    auto device = g_controller_interface.FindDevice(dq);
+
+    if (device)
+    {
+      device->UpdateInput();
+
+      io.NavInputs[ImGuiNavInput_Activate] =
+          device->FindInput("Button A")->GetState() == 1.0 ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_Cancel] =
+          device->FindInput("Button B")->GetState() == 1.0 ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadUp] =
+          device->FindInput("Left Y+")->GetState() == 1.0 ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadDown] =
+          device->FindInput("Left Y-")->GetState() == 1.0 ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadLeft] =
+          device->FindInput("Left X-")->GetState() == 1.0 ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_DpadRight] =
+          device->FindInput("Left X+")->GetState() == 1.0 ? 1.0 : 0;
     }
   }
 #endif
