@@ -304,8 +304,6 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="D3DWindow.h" />
-    <ClInclude Include="DXHelper.h" />
     <ClInclude Include="Host.h" />
     <ClInclude Include="ImGuiFrontend.h" />
     <ClInclude Include="ImGuiNetplay.h" />
@@ -320,6 +318,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\background.png" />
+    <Image Include="Assets\background_list.png" />
     <Image Include="Assets\LockScreenLogo.scale-200.png" />
     <Image Include="Assets\missing.png" />
     <Image Include="Assets\SplashScreen.scale-200.png" />
@@ -331,7 +330,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
-    <ClCompile Include="D3DWindow.cpp" />
     <ClCompile Include="ImGuiFrontend.cpp" />
     <ClCompile Include="ImGuiNetplay.cpp" />
     <ClCompile Include="pch.cpp">

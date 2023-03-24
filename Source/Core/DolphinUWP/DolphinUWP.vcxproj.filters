@@ -6,8 +6,11 @@
     <ClCompile Include="ImGuiFrontend.cpp">
       <Filter>Frontend</Filter>
     </ClCompile>
-    <ClCompile Include="D3DWindow.cpp">
+    <ClCompile Include="ImGuiNetplay.cpp">
       <Filter>Frontend</Filter>
+    </ClCompile>
+    <ClCompile Include="WinRTKeyboard.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -17,11 +20,11 @@
     <ClInclude Include="ImGuiFrontend.h">
       <Filter>Frontend</Filter>
     </ClInclude>
-    <ClInclude Include="DXHelper.h">
+    <ClInclude Include="ImGuiNetplay.h">
       <Filter>Frontend</Filter>
     </ClInclude>
-    <ClInclude Include="D3DWindow.h">
-      <Filter>Frontend</Filter>
+    <ClInclude Include="WinRTKeyboard.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +53,9 @@
       <Filter>Assets</Filter>
     </Image>
     <Image Include="Assets\missing.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\background_list.png">
       <Filter>Assets</Filter>
     </Image>
   </ItemGroup>
@@ -4835,6 +4841,9 @@
     <None Include="Sys\Wii\shared2\wc24\nwc24msg.cbk">
       <Filter>Sys\Wii\shared2\wc24</Filter>
     </None>
+    <None Include="libgallium_wgl.dll" />
+    <None Include="opengl32.dll" />
+    <None Include="z.dll" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

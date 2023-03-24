@@ -5,7 +5,6 @@
 
 namespace UWP
 {
-bool IsKeyboardShowing();
 void ShowKeyboard();
 void HandleCharacter(uint32_t keycode);
 

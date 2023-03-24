@@ -10,9 +10,11 @@
 
 #include "ImGuiFrontend.h"
 
-#include "D3DWindow.h"
 #include "UWPUtils.h"
 #include "Host.h"
+
+#include "VideoCommon/VertexManagerBase.h"
+#include "VideoCommon/FramebufferManager.h"
 
 #include "ImGuiNetplay.h"
 #include "WinRTKeyboard.h"
@@ -67,6 +69,10 @@
 
 #include "InputCommon/ControllerInterface/CoreDevice.h"
 #include "InputCommon/ControllerInterface/WGInput/WGInput.h"
+#include <VideoCommon/VideoBackendBase.h>
+#include <Common/ScopeGuard.h>
+#include "VideoCommon/RenderBase.h"
+#include <VideoBackends/D3D12/DX12Texture.h>
 
 namespace WGI = winrt::Windows::Gaming::Input;
 using winrt::Windows::UI::Core::CoreWindow;
@@ -85,16 +91,14 @@ public:
   std::string selectedPath;
 };
 
-D3DWindow m_d3dWnd;
-
 std::shared_ptr<ciface::Core::Device> m_controller = nullptr;
 std::vector<std::string> m_paths;
 std::vector<std::shared_ptr<UICommon::GameFile>> m_games;
-std::unordered_map<std::string, ID3D11ShaderResourceView*> m_cover_textures;
+std::unordered_map<std::string, std::unique_ptr<AbstractTexture>> m_cover_textures;
 u64 m_imgui_last_frame_time;
 
-ID3D11ShaderResourceView *m_background_tex, *m_background_list_tex;
-ID3D11ShaderResourceView* m_missing_tex;
+std::unique_ptr<AbstractTexture> m_background_tex, m_background_list_tex;
+std::unique_ptr<AbstractTexture> m_missing_tex;
 
 int m_selectedGameIdx;
 float m_frameScale = 1.0f;
@@ -107,22 +111,18 @@ char m_list_search_buf[32];
 
 ImGuiFrontend::ImGuiFrontend()
 {
-  // Initialize Direct3D11
-  m_d3dWnd.CreateDeviceD3D();
+  UICommon::SetUserDirectory(UWP::GetUserLocation());
+  UICommon::CreateDirectories();
+  UICommon::Init();
 
-  // Setup Dear ImGui context
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  m_d3dWnd.InitImGui();
+  CoreWindow window = CoreWindow::GetForCurrentThread();
+  void* abi = winrt::get_abi(window);
 
-  ImGuiIO& io = ImGui::GetIO();
-  io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-  io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-  io.KeyMap[ImGuiKey_Backspace] = '\b';
-
-  ImGui::StyleColorsDark();
-
-  m_d3dWnd.CleanupRenderTarget();
+  WindowSystemInfo wsi;
+  wsi.type = WindowSystemType::UWP;
+  wsi.render_surface = abi;
+  wsi.render_width = window.Bounds().Width;
+  wsi.render_height = window.Bounds().Height;
 
   GAMING_DEVICE_MODEL_INFORMATION info = {};
   GetGamingDeviceModelInformation(&info);
@@ -132,32 +132,36 @@ ImGuiFrontend::ImGuiFrontend()
         winrt::Windows::Graphics::Display::Core::HdmiDisplayInformation::GetForCurrentView();
     if (hdi)
     {
-      constexpr float frontend_modifier = 1.8f; 
+      constexpr float frontend_modifier = 1.8f;
       uint32_t width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
       uint32_t height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
 
-      m_frameScale = ((float) width / 1920.0f) * frontend_modifier;
-      io.DisplaySize.x = width;
-      io.DisplaySize.y = height;
-      io.FontGlobalScale = m_frameScale;
-      io.DisplayFramebufferScale.x = m_frameScale;
-      io.DisplayFramebufferScale.y = m_frameScale;
-
-      ImGui::GetStyle().ScaleAllSizes(m_frameScale);
-      m_d3dWnd.ResizeSwapChain(width, height);
+      m_frameScale = ((float)width / 1920.0f) * frontend_modifier;
+      wsi.render_width = hdi.GetCurrentDisplayMode().ResolutionWidthInRawPixels();
+      wsi.render_height = hdi.GetCurrentDisplayMode().ResolutionHeightInRawPixels();
+      // Our UI is based on 1080p, and we're adding a modifier to zoom in by 80%
+      wsi.render_surface_scale = ((float)wsi.render_width / 1920.0f) * 1.8f;
     }
   }
 
-  m_d3dWnd.CreateRenderTarget();
+  // Manually reactivate the video backend in case a GameINI overrides the video backend setting.
+  VideoBackendBase::PopulateBackendInfo();
+
+  // Issue any API calls which must occur on the main thread for the graphics backend.
+  WindowSystemInfo prepared_wsi(wsi);
+  g_video_backend->PrepareWindow(prepared_wsi);
+
+
+  VideoBackendBase::PopulateBackendInfo();
+  if (!g_video_backend->Initialize(wsi))
+  {
+    PanicAlertFmt("Failed to initialize video backend!");
+    return;
+  }
 
   g_controller_interface.Initialize({});
 
   PopulateControls();
-
-  UICommon::SetUserDirectory(UWP::GetUserLocation());
-  UICommon::CreateDirectories();
-  UICommon::Init();
-
   LoadGameList();
 }
 
@@ -193,21 +197,6 @@ void ImGuiFrontend::RefreshControls(bool updateGameSelection)
     return;
 
   m_controller->UpdateInput();
-
-  ImGuiIO& io = ImGui::GetIO();
-
-  io.NavInputs[ImGuiNavInput_Activate] =
-      m_controller->FindInput("Button A")->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_Cancel] =
-      m_controller->FindInput("Button B")->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadUp] =
-      m_controller->FindInput("Left Y+")->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadDown] =
-      m_controller->FindInput("Left Y-")->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadLeft] =
-      m_controller->FindInput("Left X-")->GetState() == 1.0f ? 1.0 : 0;
-  io.NavInputs[ImGuiNavInput_DpadRight] =
-      m_controller->FindInput("Left X+")->GetState() == 1.0f ? 1.0 : 0;
 
   // wrap around if exceeding the max games or going below
   if (updateGameSelection)
@@ -313,9 +302,6 @@ FrontendResult ImGuiFrontend::RunMainLoop()
     CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
         winrt::Windows::UI::Core::CoreProcessEventsOption::ProcessAllIfPresent);
 
-    if (!state.controlsDisabled)
-      RefreshControls(!state.showSettingsWindow);
-
     if (m_controller && m_controller->IsValid() && !state.controlsDisabled)
     {
       if (m_controller->FindInput("View")->GetState() == 1.0f)
@@ -378,8 +364,7 @@ FrontendResult ImGuiFrontend::RunMainLoop()
       UWP::g_char_buffer.clear();
     }
 
-    ImGui_ImplDX11_NewFrame();
-    ImGui::NewFrame();
+    g_renderer->BeginUIFrame();
 
     // Draw Background first
 
@@ -487,11 +472,13 @@ FrontendResult ImGuiFrontend::RunMainLoop()
       }
     }
 
-    m_d3dWnd.Render();
+    if (!state.controlsDisabled)
+      RefreshControls(!state.showSettingsWindow);
+
+    g_renderer->EndUIFrame();
   }
 
-  m_d3dWnd.DeInitImGui();
-  m_d3dWnd.CleanupDeviceD3D();
+  g_renderer->EndUIFrame();
   g_controller_interface.Shutdown();
 
   return selection;
@@ -1228,6 +1215,8 @@ FrontendResult ImGuiFrontend::CreateListPage()
   ImGui::SetNextWindowSize(ImVec2(540 * m_frameScale, 425 * m_frameScale));
   ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - (540 / 2) * m_frameScale,
                                  ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
+  ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.60f));
+
   if (ImGui::Begin("Dolphin Emulator", nullptr,
                    ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
                        ImGuiWindowFlags_NoSavedSettings))
@@ -1239,6 +1228,8 @@ FrontendResult ImGuiFrontend::CreateListPage()
       return FrontendResult(game);
     }
   }
+
+  ImGui::PopStyleColor();
 
   return FrontendResult();
 }
@@ -1365,7 +1356,7 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateGameCarousel()
       border_col = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    ID3D11ShaderResourceView* handle = GetHandleForGame(m_games[idx]);
+    AbstractTexture* handle = GetHandleForGame(m_games[idx]);
     ImGui::SameLine();
     ImGui::BeginChild(
         m_games[idx]->GetFilePath().c_str(),
@@ -1391,72 +1382,87 @@ std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateGameCarousel()
   return nullptr;
 }
 
-ID3D11ShaderResourceView*
-ImGuiFrontend::GetHandleForGame(std::shared_ptr<UICommon::GameFile> game)
+AbstractTexture* ImGuiFrontend::GetHandleForGame(std::shared_ptr<UICommon::GameFile> game)
 {
   std::string game_id = game->GetGameID();
   auto result = m_cover_textures.find(game_id);
   if (m_cover_textures.find(game_id) == m_cover_textures.end())
   {
-    ID3D11ShaderResourceView* handle = CreateCoverTexture(game);
-    if (handle == nullptr)
-      handle = GetOrCreateMissingTex();
-
-    m_cover_textures.emplace(game_id, handle);
-    return handle;
+    std::unique_ptr<AbstractTexture> texture = CreateCoverTexture(game);
+    if (texture == nullptr)
+    {
+      AbstractTexture* missing = GetOrCreateMissingTex();
+      m_cover_textures.emplace(game_id, missing);
+      return missing;
+    }
+    else
+    {
+      auto pair = m_cover_textures.emplace(game_id, std::move(texture));
+      return pair.first->second.get();
+    }
   }
 
-  return result->second;
+  return result->second.get();
 }
 
-ID3D11ShaderResourceView*
+std::unique_ptr<AbstractTexture>
 ImGuiFrontend::CreateCoverTexture(std::shared_ptr<UICommon::GameFile> game)
 {
   if (!File::Exists(File::GetUserPath(D_COVERCACHE_IDX) + game->GetGameTDBID() + ".png"))
   {
     game->DownloadDefaultCover();
   }
-
+  
   std::string png;
   if (!File::ReadFileToString(
           File::GetUserPath(D_COVERCACHE_IDX) + game->GetGameTDBID() + ".png", png))
     return {};
-
+  
   std::vector<uint8_t> buffer = { png.begin(), png.end() };
   if (buffer.empty())
     return {};
-
+  
   std::vector<uint8_t> data;
   u32 width, height;
   Common::LoadPNG(buffer, &data, &width, &height);
 
-  ID3D11ShaderResourceView* tex_resource;
-  if (m_d3dWnd.CreateTextureFromBuffer(width, height, data.data(), data.size(), &tex_resource))
-    return tex_resource;
+  TextureConfig cover_tex_config(width, height, 1, 1, 1,
+                            AbstractTextureFormat::RGBA8, 0);
 
-  return {};
+  std::unique_ptr<AbstractTexture> cover_tex =
+      g_renderer->CreateTexture(cover_tex_config, game->GetShortName());
+  if (!cover_tex)
+  {
+    PanicAlertFmt("Failed to create ImGui texture");
+    return {};
+  }
+
+  cover_tex->Load(0, width, height, width, data.data(),
+                 sizeof(u32) * width * height);
+
+  return std::move(cover_tex);
 }
 
-ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateBackgroundTex(bool list_view)
+AbstractTexture* ImGuiFrontend::GetOrCreateBackgroundTex(bool list_view)
 {
   if (list_view)
   {
     if (m_background_list_tex != nullptr)
-      return m_background_list_tex;
+      return m_background_list_tex.get();
   }
   else
   {
     if (m_background_tex != nullptr)
-      return m_background_tex;
+      return m_background_tex.get();
   }
-
+  
   auto user_folder = File::GetUserPath(0);
   std::string bg_path = user_folder + (list_view ? "/background_list.png" : "/background.png");
-
+  
   if (!File::Exists(bg_path))
   {
     bg_path = list_view ? "Assets/background_list.png" : "Assets/background.png";
-
+  
     if (!File::Exists(bg_path))
       return nullptr;
   }
@@ -1464,42 +1470,71 @@ ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateBackgroundTex(bool list_view
   std::string png;
   if (!File::ReadFileToString(bg_path, png))
     return {};
-
+  
   std::vector<uint8_t> buffer = {png.begin(), png.end()};
   if (buffer.empty())
     return {};
-
+  
   std::vector<uint8_t> data;
   u32 width, height;
   Common::LoadPNG(buffer, &data, &width, &height);
 
-  if (m_d3dWnd.CreateTextureFromBuffer(width, height, data.data(), data.size(), &m_background_tex))
-    return m_background_tex;
+  TextureConfig bg_tex_config(width, height, 1, 1, 1, AbstractTextureFormat::RGBA8, 0);
 
-  return nullptr;
+  std::unique_ptr<AbstractTexture> bg_tex =
+      g_renderer->CreateTexture(bg_tex_config, list_view ? "background1" : "background2");
+  if (!bg_tex)
+  {
+    PanicAlertFmt("Failed to create ImGui texture");
+    return {};
+  }
+
+  bg_tex->Load(0, width, height, width, data.data(), sizeof(u32) * width * height);
+
+  if (list_view)
+  {
+    m_background_list_tex = std::move(bg_tex);
+    return m_background_list_tex.get();
+  }
+  else
+  {
+    m_background_tex = std::move(bg_tex);
+    return m_background_tex.get();
+  }
 }
 
-ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateMissingTex()
+AbstractTexture* ImGuiFrontend::GetOrCreateMissingTex()
 {
   if (m_missing_tex != nullptr)
-    return m_missing_tex;
-
+    return m_missing_tex.get();
+  
   std::string png;
   if (!File::ReadFileToString("Assets/missing.png", png))
     return {};
-
+  
   std::vector<uint8_t> buffer = {png.begin(), png.end()};
   if (buffer.empty())
     return {};
-
+  
   std::vector<uint8_t> data;
   u32 width, height;
   Common::LoadPNG(buffer, &data, &width, &height);
+  
+  TextureConfig missing_tex_config(width, height, 1, 1, 1, AbstractTextureFormat::RGBA8, 0);
 
-  if (m_d3dWnd.CreateTextureFromBuffer(width, height, data.data(), data.size(), &m_missing_tex))
-    return m_missing_tex;
+  std::unique_ptr<AbstractTexture> missing_tex =
+      g_renderer->CreateTexture(missing_tex_config, "missing");
+  if (!missing_tex)
+  {
+    PanicAlertFmt("Failed to create ImGui texture");
+    return {};
+  }
 
-  return nullptr;
+  missing_tex->Load(0, width, height, width, data.data(), sizeof(u32) * width * height);
+
+  m_missing_tex = std::move(missing_tex);
+
+  return missing_tex.get();
 }
 
 void ImGuiFrontend::LoadGameList()

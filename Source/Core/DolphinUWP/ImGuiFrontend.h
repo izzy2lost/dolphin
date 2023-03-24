@@ -1,7 +1,7 @@
 #pragma once
 
-#include "D3DWindow.h"
 #include "Core/TitleDatabase.h"
+#include "VideoCommon/AbstractTexture.h"
 
 namespace UICommon
 {
@@ -61,9 +61,9 @@ private:
   void RecurseFolder(std::string path);
   void AddGameFolder(std::string path);
 
-  ID3D11ShaderResourceView* GetOrCreateBackgroundTex(bool list_view);
-  ID3D11ShaderResourceView* GetOrCreateMissingTex();
-  ID3D11ShaderResourceView* GetHandleForGame(std::shared_ptr<UICommon::GameFile> game);
-  ID3D11ShaderResourceView* CreateCoverTexture(std::shared_ptr<UICommon::GameFile> game);
+  AbstractTexture* GetOrCreateBackgroundTex(bool list_view);
+  AbstractTexture* GetOrCreateMissingTex();
+  AbstractTexture* GetHandleForGame(std::shared_ptr<UICommon::GameFile> game);
+  std::unique_ptr<AbstractTexture> CreateCoverTexture(std::shared_ptr<UICommon::GameFile> game);
 };
 }  // namespace ImGuiFrontend
