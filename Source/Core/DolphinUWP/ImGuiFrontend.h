@@ -38,6 +38,7 @@ public:
   ImGuiFrontend();
   FrontendResult RunUntilSelection();
   Core::TitleDatabase m_title_database;
+  std::mutex m_frontend_mutex;
 
 private:
   void PopulateControls();

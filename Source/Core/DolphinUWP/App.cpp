@@ -229,8 +229,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::unique_ptr<BootParameters> boot =
         BootParameters::GenerateFromFile(path, BootSessionData("", DeleteSavestateAfterBoot::No));
 
-    UICommon::InitControllers(wsi);
-
     if (!BootManager::BootCore(std::move(boot), wsi))
     {
       fprintf(stderr, "Could not boot the specified file\n");
@@ -290,6 +288,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     UICommon::SetUserDirectory(UWP::GetUserLocation());
     UICommon::CreateDirectories();
     UICommon::Init();
+    UICommon::InitControllers({});
 
     std::string gamePath = filePath.str();
     if (!gamePath.empty() && gamePath != "")

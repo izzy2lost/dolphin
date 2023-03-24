@@ -147,15 +147,12 @@ ImGuiFrontend::ImGuiFrontend()
   WindowSystemInfo prepared_wsi(wsi);
   g_video_backend->PrepareWindow(prepared_wsi);
 
-
   VideoBackendBase::PopulateBackendInfo();
   if (!g_video_backend->Initialize(wsi))
   {
     PanicAlertFmt("Failed to initialize video backend!");
     return;
   }
-
-  g_controller_interface.Initialize({});
 
   ImGui::GetIO().KeyMap[ImGuiKey_Backspace] = '\b';
 
@@ -485,7 +482,6 @@ FrontendResult ImGuiFrontend::RunMainLoop()
   }
 
   g_renderer->EndUIFrame();
-  g_controller_interface.Shutdown();
 
   return selection;
 }

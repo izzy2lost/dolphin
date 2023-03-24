@@ -2,6 +2,8 @@
 #include "UWPUtils.h"
 #include "WinRTKeyboard.h"
 
+#include "imgui.h"
+
 #include <algorithm>
 #include <cctype>
 
@@ -26,9 +28,8 @@
 #include "UICommon/GameFile.h"
 #include "UICommon/UICommon.h"
 
-#include "imgui.h"
-#include <VideoCommon/NetPlayChatUI.h>
-#include <VideoCommon/OnScreenDisplay.h>
+#include "VideoCommon/NetPlayChatUI.h"
+#include "VideoCommon/OnScreenDisplay.h"
 
 using winrt::Windows::UI::Core::CoreWindow;
 using namespace winrt;
@@ -459,9 +460,6 @@ void ImGuiNetPlay::BootGame(const std::string& filename,
   CoreApplication::MainView().Dispatcher().RunAsync(
       winrt::Windows::UI::Core::CoreDispatcherPriority::Normal,
       [filename, data = std::move(boot_session_data)] {
-        // Todo, proper synchronisation
-        Sleep(100); // avoid a race condition where we initialise before the frontend closes
-
         CoreWindow window = CoreWindow::GetForCurrentThread();
         void* abi = winrt::get_abi(window);
 
@@ -489,8 +487,6 @@ void ImGuiNetPlay::BootGame(const std::string& filename,
 
         std::unique_ptr<BootParameters> boot =
             BootParameters::GenerateFromFile(filename, std::move(*data));
-
-        UICommon::InitControllers(wsi);
 
         if (!BootManager::BootCore(std::move(boot), wsi))
         {
@@ -626,8 +622,6 @@ void ImGuiNetPlay::OnTraversalStateChanged(TraversalClient::State state)
 
 void ImGuiNetPlay::OnGameStartAborted()
 {
-  g_netplay_client->StopGame();
-
   if (Core::IsRunningAndStarted())
   {
     UWP::g_shutdown_requested.Set();
