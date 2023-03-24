@@ -45,6 +45,8 @@ private:
 
   FrontendResult RunMainLoop();
   FrontendResult CreateMainPage();
+  FrontendResult CreateListPage();
+  std::shared_ptr<UICommon::GameFile> CreateGameCarousel();
   std::shared_ptr<UICommon::GameFile> CreateGameList();
 
   void CreateGeneralTab(UIState* state);
@@ -59,7 +61,7 @@ private:
   void RecurseFolder(std::string path);
   void AddGameFolder(std::string path);
 
-  ID3D11ShaderResourceView* GetOrCreateBackgroundTex();
+  ID3D11ShaderResourceView* GetOrCreateBackgroundTex(bool list_view);
   ID3D11ShaderResourceView* GetOrCreateMissingTex();
   ID3D11ShaderResourceView* GetHandleForGame(std::shared_ptr<UICommon::GameFile> game);
   ID3D11ShaderResourceView* CreateCoverTexture(std::shared_ptr<UICommon::GameFile> game);

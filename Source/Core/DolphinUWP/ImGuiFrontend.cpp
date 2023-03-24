@@ -78,8 +78,10 @@ class UIState
 public:
   bool controlsDisabled = false;
   bool showSettingsWindow = false;
+  bool showListView = false;
   bool menuPressed = false;
   bool netplayPressed = false;
+  bool listViewPressed = false;
   std::string selectedPath;
 };
 
@@ -91,13 +93,17 @@ std::vector<std::shared_ptr<UICommon::GameFile>> m_games;
 std::unordered_map<std::string, ID3D11ShaderResourceView*> m_cover_textures;
 u64 m_imgui_last_frame_time;
 
-ID3D11ShaderResourceView* m_background_tex;
+ID3D11ShaderResourceView *m_background_tex, *m_background_list_tex;
 ID3D11ShaderResourceView* m_missing_tex;
 
 int m_selectedGameIdx;
 float m_frameScale = 1.0f;
 bool m_direction_pressed = false;
 std::chrono::high_resolution_clock::time_point m_scroll_last = std::chrono::high_resolution_clock::now();
+
+std::string m_prev_list_search;
+std::vector<std::shared_ptr<UICommon::GameFile>> m_list_search_results;
+char m_list_search_buf[32];
 
 ImGuiFrontend::ImGuiFrontend()
 {
@@ -323,6 +329,14 @@ FrontendResult ImGuiFrontend::RunMainLoop()
       }
       else if (m_controller->FindInput("Button X")->GetState() == 1.0f)
       {
+        if (!state.listViewPressed)
+        {
+          state.showListView = !state.showListView;
+          state.listViewPressed = true;
+        }
+      }
+      else if (m_controller->FindInput("Menu")->GetState() == 1.0f)
+      {
         if (!state.netplayPressed)
         {
           if (g_netplay_dialog)
@@ -343,6 +357,7 @@ FrontendResult ImGuiFrontend::RunMainLoop()
       {
         state.menuPressed = false;
         state.netplayPressed = false;
+        state.listViewPressed = false;
       }
     }
 
@@ -379,7 +394,7 @@ FrontendResult ImGuiFrontend::RunMainLoop()
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoTitleBar |
                          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
       ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav)) {
-      ImGui::Image(GetOrCreateBackgroundTex(), ImGui::GetIO().DisplaySize);
+      ImGui::Image(GetOrCreateBackgroundTex(state.showListView), ImGui::GetIO().DisplaySize);
       ImGui::End();
     }
     ImGui::PopStyleVar(3);
@@ -453,6 +468,14 @@ FrontendResult ImGuiFrontend::RunMainLoop()
 
         ImGui::EndTabBar();
         ImGui::End();
+      }
+    }
+    else if (state.showListView)
+    {
+      selection = CreateListPage();
+      if (selection.game_result != nullptr || selection.netplay)
+      {
+        break;
       }
     }
     else
@@ -1164,147 +1187,6 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
   ImGui::TextWrapped("Note: Please remember to do your USB filesystem setup, or paths to "
                      "your USB will not work properly!");
 }
-//
-//void ImGuiFrontend::CreateNetplaySetupWindow(UIState* state)
-//{
-//  if (ImGui::Begin("Netplay", nullptr,
-//                   ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
-//                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
-//  {
-//    std::string type = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
-//    bool is_traversal = type == "traversal";
-//
-//    if (ImGui::BeginCombo("Connection Type", type.c_str()))
-//    {
-//      if (ImGui::Selectable("Direct Connection", type == "direct")) {
-//        Config::SetBaseOrCurrent(Config::NETPLAY_TRAVERSAL_CHOICE, "direct");
-//        Config::Save();
-//      }
-//
-//      if (ImGui::Selectable("Traversal Server", type == "traversal"))
-//      {
-//        Config::SetBaseOrCurrent(Config::NETPLAY_TRAVERSAL_CHOICE, "traversal");
-//        Config::Save();
-//      }
-//    }
-//
-//    // Todo, popup keyboard
-//    std::string netplay_nickname = Config::Get(Config::NETPLAY_NICKNAME);
-//    std::vector<char> nick_buf(netplay_nickname.size());
-//
-//    if (ImGui::InputText("Nickname", nick_buf.data(), 16))
-//    {
-//      Config::SetBaseOrCurrent(Config::NETPLAY_NICKNAME, std::string(nick_buf.data()));
-//      Config::Save();
-//    }
-//
-//    ImGui::BeginTabBar("#connectionTabs");
-//    if (ImGui::BeginTabItem("Connect"))
-//    {
-//      std::string host_ip = is_traversal ? Config::Get(Config::NETPLAY_HOST_CODE) :
-//                               Config::Get(Config::NETPLAY_ADDRESS);
-//
-//      std::vector<char> host_buf(32);
-//
-//      if (ImGui::InputText(is_traversal ? "Host Code" : "Host IP", host_buf.data(), 32))
-//      {
-//        Config::SetBaseOrCurrent(is_traversal ? Config::NETPLAY_HOST_CODE : Config::NETPLAY_ADDRESS, std::string(host_buf.data()));
-//        Config::Save();
-//      }
-//
-//      if (ImGui::Button("Connect"))
-//      {
-//        std::string host_ip = is_traversal ? Config::Get(Config::NETPLAY_HOST_CODE) :
-//                                 Config::Get(Config::NETPLAY_ADDRESS);
-//        u16 host_port = Config::Get(Config::NETPLAY_CONNECT_PORT);
-//
-//        const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
-//        const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
-//        const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
-//        const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
-//        const bool host_input_authority =
-//            network_mode == "hostinputauthority" || network_mode == "golf";
-//
-//        netplay_dialog = new ImGuiNetPlay();
-//        netplay_client = new NetPlay::NetPlayClient(
-//            host_ip, host_port, netplay_dialog, nickname,
-//            NetPlay::NetTraversalConfig{is_traversal, traversal_host,
-//                                        traversal_port});
-//      }
-//      
-//      ImGui::EndTabItem();
-//    }
-//
-//    if (ImGui::BeginTabItem("Host"))
-//    {
-//      std::shared_ptr<const UICommon::GameFile> selected_game = nullptr;
-//      if (ImGui::BeginListBox("Games List"))
-//      {
-//        for (auto& game : m_games)
-//        {
-//          if (ImGui::Selectable(game->GetLongName().c_str(), selected_game == game))
-//          {
-//            selected_game = game;
-//          }
-//        }
-//
-//        ImGui::EndListBox();
-//      }
-//      
-//      // Settings
-//      u16 host_port = Config::Get(Config::NETPLAY_HOST_PORT);
-//      const std::string traversal_choice = Config::Get(Config::NETPLAY_TRAVERSAL_CHOICE);
-//      const bool is_traversal = traversal_choice == "traversal";
-//      const bool use_upnp = Config::Get(Config::NETPLAY_USE_UPNP);
-//
-//      const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
-//      const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
-//
-//      if (is_traversal)
-//        host_port = Config::Get(Config::NETPLAY_LISTEN_PORT);
-//
-//      // Create Server
-//      netplay_dialog = new ImGuiNetPlay();
-//      netplay_server = new NetPlay::NetPlayServer(
-//          host_port, use_upnp, netplay_dialog,
-//          NetPlay::NetTraversalConfig{is_traversal, traversal_host, traversal_port});
-//
-//      //if (!Settings::Instance().GetNetPlayServer()->is_connected)
-//      //{
-//      //  ModalMessageBox::critical(
-//      //      nullptr, tr("Failed to open server"),
-//      //      tr("Failed to listen on port %1. Is another instance of the NetPlay server running?")
-//      //          .arg(host_port));
-//      //  NetPlayQuit();
-//      //  return false;
-//      //}
-//
-//      netplay_server->ChangeGame(selected_game->GetSyncIdentifier(), selected_game->GetLongName());
-//
-//      std::string host_ip = "127.0.0.1";
-//      u16 host_port = netplay_server->GetPort();
-//
-//      const std::string traversal_host = Config::Get(Config::NETPLAY_TRAVERSAL_SERVER);
-//      const u16 traversal_port = Config::Get(Config::NETPLAY_TRAVERSAL_PORT);
-//      const std::string nickname = Config::Get(Config::NETPLAY_NICKNAME);
-//      const std::string network_mode = Config::Get(Config::NETPLAY_NETWORK_MODE);
-//      const bool host_input_authority =
-//          network_mode == "hostinputauthority" || network_mode == "golf";
-//
-//      netplay_dialog = new ImGuiNetPlay();
-//      netplay_client = new NetPlay::NetPlayClient(
-//          host_ip, host_port, netplay_dialog, nickname,
-//          NetPlay::NetTraversalConfig{is_traversal, traversal_host, traversal_port});
-//
-//      ImGui::EndTabItem();
-//    }
-//
-//    ImGui::EndTabBar();
-//
-//    ImGui::EndTabBar();
-//    ImGui::End();
-//  }
-//}
 
 FrontendResult ImGuiFrontend::CreateMainPage()
 {
@@ -1321,7 +1203,7 @@ FrontendResult ImGuiFrontend::CreateMainPage()
                        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoBackground |
                        extraFlags))
   {
-    auto game = CreateGameList();
+    auto game = CreateGameCarousel();
     ImGui::End();
     if (game != nullptr)
     {
@@ -1341,7 +1223,93 @@ FrontendResult ImGuiFrontend::CreateMainPage()
   return FrontendResult(); // keep running
 }
 
+FrontendResult ImGuiFrontend::CreateListPage()
+{
+  ImGui::SetNextWindowSize(ImVec2(540 * m_frameScale, 425 * m_frameScale));
+  ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - (540 / 2) * m_frameScale,
+                                 ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
+  if (ImGui::Begin("Dolphin Emulator", nullptr,
+                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove |
+                       ImGuiWindowFlags_NoSavedSettings))
+  {
+    auto game = CreateGameList();
+    ImGui::End();
+    if (game != nullptr)
+    {
+      return FrontendResult(game);
+    }
+  }
+
+  return FrontendResult();
+}
+
 std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateGameList()
+{
+  if (ImGui::Button("Search Game"))
+  {
+    UWP::ShowKeyboard();
+    ImGui::SetKeyboardFocusHere();
+  }
+  ImGui::SameLine();
+
+  ImGui::PushItemWidth(-1);
+  ImGui::InputText("##gamesearch", m_list_search_buf, 32);
+  ImGui::PopItemWidth();
+
+  ImGui::Spacing();
+  ImGui::Separator();
+  ImGui::Spacing();
+
+  if (ImGui::BeginListBox("##Games List", ImVec2(-1, -1)))
+  {
+    int search = strlen(m_list_search_buf);
+    std::vector<std::shared_ptr<UICommon::GameFile>> games;
+    if (search > 0)
+    {
+      std::string search_phrase = std::string(m_list_search_buf);
+      if (search_phrase != m_prev_list_search)
+      {
+        m_list_search_results.clear();
+        for (auto& game : m_games)
+        {
+            auto& name = game->GetLongName();
+            auto it = std::search(name.begin(), name.end(), search_phrase.begin(),
+                                  search_phrase.end(), [](unsigned char ch1, unsigned char ch2) {
+                                    return std::toupper(ch1) == std::toupper(ch2);
+                                  });
+
+            if (it != name.end())
+            {
+              m_list_search_results.push_back(game);
+            }
+        }
+
+        m_prev_list_search = m_list_search_buf;
+      }
+
+      games = m_list_search_results;
+    }
+    else
+    {
+      games = m_games;
+    }
+
+    for (auto& game : games)
+    {
+      if (ImGui::Selectable(std::format("{}##{}", game->GetLongName(), game->GetFilePath()).c_str()))
+      {
+        ImGui::EndListBox();
+        return game;
+      }
+    }
+
+    ImGui::EndListBox();
+  }
+
+  return nullptr;
+}
+
+std::shared_ptr<UICommon::GameFile> ImGuiFrontend::CreateGameCarousel()
 {
   if (ImGui::GetIO().NavInputs[ImGuiNavInput_Activate] > 0.5f)
   {
@@ -1469,17 +1437,25 @@ ImGuiFrontend::CreateCoverTexture(std::shared_ptr<UICommon::GameFile> game)
   return {};
 }
 
-ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateBackgroundTex()
+ID3D11ShaderResourceView* ImGuiFrontend::GetOrCreateBackgroundTex(bool list_view)
 {
-  if (m_background_tex != nullptr)
-    return m_background_tex;
+  if (list_view)
+  {
+    if (m_background_list_tex != nullptr)
+      return m_background_list_tex;
+  }
+  else
+  {
+    if (m_background_tex != nullptr)
+      return m_background_tex;
+  }
 
   auto user_folder = File::GetUserPath(0);
-  std::string bg_path = user_folder + "/background.png";
+  std::string bg_path = user_folder + (list_view ? "/background_list.png" : "/background.png");
 
   if (!File::Exists(bg_path))
   {
-    bg_path = "Assets/background.png";
+    bg_path = list_view ? "Assets/background_list.png" : "Assets/background.png";
 
     if (!File::Exists(bg_path))
       return nullptr;
