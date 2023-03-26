@@ -91,7 +91,7 @@ public:
   std::string selectedPath;
 };
 
-std::shared_ptr<ciface::Core::Device> m_controller = nullptr;
+std::vector<std::shared_ptr<ciface::Core::Device>> m_controllers;
 std::vector<std::string> m_paths;
 std::vector<std::shared_ptr<UICommon::GameFile>> m_games;
 std::unordered_map<std::string, std::unique_ptr<AbstractTexture>> m_cover_textures;
@@ -176,100 +176,106 @@ void ImGuiFrontend::PopulateControls()
 
   ciface::Core::DeviceQualifier dq;
   dq.FromString(g_controller_interface.GetDefaultDeviceString());
-  auto device = g_controller_interface.FindDevice(dq);
-  if (device)
+  for (auto& device_str : g_controller_interface.GetAllDeviceStrings())
   {
-    m_controller = std::move(device);
+    auto device = g_controller_interface.FindDevice(dq);
+    if (device)
+    {
+      m_controllers.push_back(std::move(device));
+    }
   }
 }
 
 void ImGuiFrontend::RefreshControls(bool updateGameSelection)
 {
-  if (m_controller == nullptr || m_controller->Inputs().empty() || m_controller->Outputs().empty())
+  if (m_controllers.empty())
     PopulateControls();
 
-  if (m_controller == nullptr || !m_controller->IsValid())
-    return;
-
-  m_controller->UpdateInput();
-
-  // wrap around if exceeding the max games or going below
-  if (updateGameSelection)
+  for (auto device : m_controllers)
   {
-    auto now = std::chrono::high_resolution_clock::now();
-    long timeSinceLastInput =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - m_scroll_last).count();
-    if (m_controller->FindInput("Pad W")->GetState() > 0.5f)
-    {
-      if (!m_direction_pressed)
-      {
-        m_selectedGameIdx = m_selectedGameIdx <= 0 ? m_games.size() - 1 : m_selectedGameIdx - 1;
-        m_direction_pressed = true;
-      }
-    }
-    else if (m_controller->FindInput("Pad E")->GetState() > 0.5f)
-    {
-      if (!m_direction_pressed)
-      {
-        m_selectedGameIdx = m_selectedGameIdx >= m_games.size() - 1 ? 0 : m_selectedGameIdx + 1;
-        m_direction_pressed = true;
-      }
-    }
-    else if (m_controller->FindInput("Left X-")->GetState() > 0.5f)
-    {
-      if (timeSinceLastInput > 200L)
-      {
-        m_selectedGameIdx = m_selectedGameIdx <= 0 ? m_games.size() - 1 : m_selectedGameIdx - 1;
-        m_scroll_last = std::chrono::high_resolution_clock::now();
-      }
-    }
-    else if (m_controller->FindInput("Left X+")->GetState() > 0.5f)
-    {
-      if (timeSinceLastInput > 200L)
-      {
-        m_selectedGameIdx = m_selectedGameIdx >= m_games.size() - 1 ? 0 : m_selectedGameIdx + 1;
-        m_scroll_last = std::chrono::high_resolution_clock::now();
-      }
-    }
-    else if (m_games.size() > 10 && m_controller->FindInput("Bumper L")->GetState() > 0.5f)
-    {
-      if (timeSinceLastInput > 500L)
-      {
-        int i = m_selectedGameIdx - 10;
-        if (i < 0)
-        {
-          // wrap around, total games + -index
-          m_selectedGameIdx = m_games.size() + i;
-        }
-        else
-        {
-          m_selectedGameIdx = i;
-        }
+    if (device == nullptr || !device->IsValid())
+      return;
 
-        m_scroll_last = std::chrono::high_resolution_clock::now();
-      }
-    }
-    else if (m_games.size() > 10 && m_controller->FindInput("Bumper R")->GetState() > 0.5f)
-    {
-      if (timeSinceLastInput > 500L)
-      {
-        int i = m_selectedGameIdx + 10;
-        if (i >= m_games.size())
-        {
-          // wrap around, i - total games
-          m_selectedGameIdx = i - m_games.size();
-        }
-        else
-        {
-          m_selectedGameIdx = i;
-        }
+    device->UpdateInput();
 
-        m_scroll_last = std::chrono::high_resolution_clock::now();
-      }
-    }
-    else
+    // wrap around if exceeding the max games or going below
+    if (updateGameSelection)
     {
-      m_direction_pressed = false;
+      auto now = std::chrono::high_resolution_clock::now();
+      long timeSinceLastInput =
+          std::chrono::duration_cast<std::chrono::milliseconds>(now - m_scroll_last).count();
+      if (device->FindInput("Pad W")->GetState() > 0.5f)
+      {
+        if (!m_direction_pressed)
+        {
+          m_selectedGameIdx = m_selectedGameIdx <= 0 ? m_games.size() - 1 : m_selectedGameIdx - 1;
+          m_direction_pressed = true;
+        }
+      }
+      else if (device->FindInput("Pad E")->GetState() > 0.5f)
+      {
+        if (!m_direction_pressed)
+        {
+          m_selectedGameIdx = m_selectedGameIdx >= m_games.size() - 1 ? 0 : m_selectedGameIdx + 1;
+          m_direction_pressed = true;
+        }
+      }
+      else if (device->FindInput("Left X-")->GetState() > 0.5f)
+      {
+        if (timeSinceLastInput > 200L)
+        {
+          m_selectedGameIdx = m_selectedGameIdx <= 0 ? m_games.size() - 1 : m_selectedGameIdx - 1;
+          m_scroll_last = std::chrono::high_resolution_clock::now();
+        }
+      }
+      else if (device->FindInput("Left X+")->GetState() > 0.5f)
+      {
+        if (timeSinceLastInput > 200L)
+        {
+          m_selectedGameIdx = m_selectedGameIdx >= m_games.size() - 1 ? 0 : m_selectedGameIdx + 1;
+          m_scroll_last = std::chrono::high_resolution_clock::now();
+        }
+      }
+      else if (m_games.size() > 10 && device->FindInput("Bumper L")->GetState() > 0.5f)
+      {
+        if (timeSinceLastInput > 500L)
+        {
+          int i = m_selectedGameIdx - 10;
+          if (i < 0)
+          {
+            // wrap around, total games + -index
+            m_selectedGameIdx = m_games.size() + i;
+          }
+          else
+          {
+            m_selectedGameIdx = i;
+          }
+
+          m_scroll_last = std::chrono::high_resolution_clock::now();
+        }
+      }
+      else if (m_games.size() > 10 && device->FindInput("Bumper R")->GetState() > 0.5f)
+      {
+        if (timeSinceLastInput > 500L)
+        {
+          int i = m_selectedGameIdx + 10;
+          if (i >= m_games.size())
+          {
+            // wrap around, i - total games
+            m_selectedGameIdx = i - m_games.size();
+          }
+          else
+          {
+            m_selectedGameIdx = i;
+          }
+
+          m_scroll_last = std::chrono::high_resolution_clock::now();
+        }
+      }
+      else
+      {
+        m_direction_pressed = false;
+      }
     }
   }
 }
@@ -297,48 +303,51 @@ FrontendResult ImGuiFrontend::RunMainLoop()
     CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(
         winrt::Windows::UI::Core::CoreProcessEventsOption::ProcessAllIfPresent);
 
-    if (m_controller && m_controller->IsValid() && !state.controlsDisabled)
+    for (auto device : m_controllers)
     {
-      if (m_controller->FindInput("View")->GetState() == 1.0f)
+      if (device && device->IsValid() && !state.controlsDisabled)
       {
-        if (!state.menuPressed)
+        if (device->FindInput("View")->GetState() == 1.0f)
         {
-          state.showSettingsWindow = !state.showSettingsWindow;
-          state.menuPressed = true;
-          LoadGameList();   
-        }
-      }
-      else if (m_controller->FindInput("Button X")->GetState() == 1.0f)
-      {
-        if (!state.listViewPressed)
-        {
-          state.showListView = !state.showListView;
-          state.listViewPressed = true;
-        }
-      }
-      else if (m_controller->FindInput("Menu")->GetState() == 1.0f)
-      {
-        if (!state.netplayPressed)
-        {
-          if (g_netplay_dialog)
+          if (!state.menuPressed)
           {
-            g_netplay_client = nullptr;
-            g_netplay_server = nullptr;
-            g_netplay_dialog = nullptr;
+            state.showSettingsWindow = !state.showSettingsWindow;
+            state.menuPressed = true;
+            LoadGameList();
           }
-          else
+        }
+        else if (device->FindInput("Button X")->GetState() == 1.0f)
+        {
+          if (!state.listViewPressed)
           {
-            g_netplay_dialog = std::make_shared<ImGuiNetPlay>(this, m_games, m_frameScale);
+            state.showListView = !state.showListView;
+            state.listViewPressed = true;
           }
+        }
+        else if (device->FindInput("Menu")->GetState() == 1.0f)
+        {
+          if (!state.netplayPressed)
+          {
+            if (g_netplay_dialog)
+            {
+              g_netplay_client = nullptr;
+              g_netplay_server = nullptr;
+              g_netplay_dialog = nullptr;
+            }
+            else
+            {
+              g_netplay_dialog = std::make_shared<ImGuiNetPlay>(this, m_games, m_frameScale);
+            }
 
-          state.netplayPressed = true;
+            state.netplayPressed = true;
+          }
         }
-      }
-      else
-      {
-        state.menuPressed = false;
-        state.netplayPressed = false;
-        state.listViewPressed = false;
+        else
+        {
+          state.menuPressed = false;
+          state.netplayPressed = false;
+          state.listViewPressed = false;
+        }
       }
     }
 
