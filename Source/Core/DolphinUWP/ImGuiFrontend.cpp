@@ -1238,6 +1238,7 @@ FrontendResult ImGuiFrontend::CreateListPage()
     ImGui::End();
     if (game != nullptr)
     {
+      ImGui::PopStyleColor();
       return FrontendResult(game);
     }
   }
