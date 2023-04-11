@@ -39,6 +39,7 @@
 #include "Common/Timer.h"
 #include "Common/Version.h"
 
+#include "Core/AchievementManager.h"
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
 #include "Core/Config/MainSettings.h"
@@ -284,6 +285,10 @@ void Stop()  // - Hammertime!
 {
   if (GetState() == State::Stopping || GetState() == State::Uninitialized)
     return;
+
+#ifdef USE_RETRO_ACHIEVEMENTS
+  AchievementManager::GetInstance()->CloseGame();
+#endif  // USE_RETRO_ACHIEVEMENTS
 
   s_is_stopping = true;
 
