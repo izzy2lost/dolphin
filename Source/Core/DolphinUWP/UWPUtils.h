@@ -42,6 +42,11 @@ inline std::string GetUserLocation()
   }
 }
 
+inline std::string GetLocalFolder()
+{
+  return winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path());
+}
+
 #pragma warning(push)
 #pragma warning(disable : 4265)
 inline winrt::fire_and_forget OpenNewUserPicker(std::function<void()> folderPickedCallback)

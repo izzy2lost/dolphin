@@ -339,12 +339,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="DolphinUWP_TemporaryKey.pfx" />
-    <None Include="libgallium_wgl.dll">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="opengl32.dll">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="packages.config" />
     <None Include="PropertySheet.props" />
     <None Include="Sys\codehandler.bin">
@@ -5088,9 +5082,6 @@
       <DeploymentContent>true</DeploymentContent>
     </None>
     <None Include="Sys\Wii\shared2\wc24\nwc24msg.cfg">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
-    <None Include="z.dll">
       <DeploymentContent>true</DeploymentContent>
     </None>
   </ItemGroup>

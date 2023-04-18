@@ -147,7 +147,10 @@ bool VideoBackend::Initialize(const WindowSystemInfo& wsi)
     return false;
   }
 
+#if !_UWP
   g_shader_cache->InitializeShaderCache();
+#endif
+
   return true;
 }
 

@@ -90,6 +90,7 @@
 #include "VideoCommon/PerformanceMetrics.h"
 #include "VideoCommon/RenderBase.h"
 #include "VideoCommon/VideoBackendBase.h"
+#include "VideoCommon/ShaderCache.h"
 
 #ifdef ANDROID
 #include "jni/AndroidCommon/IDCache.h"
@@ -539,6 +540,8 @@ static void EmuThread(std::unique_ptr<BootParameters> boot, WindowSystemInfo wsi
       PanicAlertFmt("Failed to initialize video backend!");
       return;
     }
+
+    g_shader_cache->InitializeShaderCache();
   }
   else
   {
@@ -546,6 +549,7 @@ static void EmuThread(std::unique_ptr<BootParameters> boot, WindowSystemInfo wsi
     {
       // Reload the libraries, as they get unloaded in the previous steps
       D3DCommon::LoadLibraries();
+      g_shader_cache->InitializeShaderCache();
     }
    }
 
