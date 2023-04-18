@@ -79,6 +79,19 @@ using winrt::Windows::UI::Core::CoreWindow;
 using namespace winrt;
 
 namespace ImGuiFrontend {
+enum SelectedTab
+{
+  General,
+  Interface,
+  Graphics,
+  Controls,
+  Paths,
+  Wii,
+  GC,
+  Advanced,
+  About
+};
+
 class UIState
 {
 public:
@@ -89,6 +102,7 @@ public:
   bool netplayPressed = false;
   bool listViewPressed = false;
   std::string selectedPath;
+  SelectedTab selectedTab = General;
 };
 
 std::vector<std::shared_ptr<ciface::Core::Device>> m_controllers;
@@ -411,59 +425,55 @@ FrontendResult ImGuiFrontend::RunMainLoop()
                        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
                            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
       {
-        ImGui::BeginTabBar("#settingsTab");
-
-        if (ImGui::BeginTabItem("General"))
+        if (ImGui::BeginListBox("##tabs", ImVec2(100 * m_frameScale, -1)))
         {
-          CreateGeneralTab(&state);
-          ImGui::EndTabItem();
+          if (ImGui::Selectable("General", state.selectedTab == General)) { state.selectedTab = General; }
+          if (ImGui::Selectable("Interface", state.selectedTab == Interface)) { state.selectedTab = Interface; }
+          if (ImGui::Selectable("Graphics", state.selectedTab == Graphics)) { state.selectedTab = Graphics; }
+          if (ImGui::Selectable("GameCube", state.selectedTab == GC)) { state.selectedTab = GC; }
+          if (ImGui::Selectable("Wii", state.selectedTab == Wii)) { state.selectedTab = Wii; }
+          if (ImGui::Selectable("Paths", state.selectedTab == Paths)) { state.selectedTab = Paths; }
+          if (ImGui::Selectable("Advanced", state.selectedTab == Advanced)) { state.selectedTab = Advanced; }
+          if (ImGui::Selectable("About", state.selectedTab == About)) { state.selectedTab = About; }
+
+          ImGui::EndListBox();
         }
 
-        if (ImGui::BeginTabItem("Interface"))
+        ImGui::SameLine();
+        ImGui::BeginChild("##tabview", ImVec2(-1, -1), true);
+        switch (state.selectedTab)
         {
-          CreateInterfaceTab(&state);
-          ImGui::EndTabItem();
+          case General:
+            CreateGeneralTab(&state);
+            break;
+          case Interface:
+            CreateInterfaceTab(&state);
+            break;
+          case Graphics:
+            CreateGraphicsTab(&state);
+            break;
+          case GC:
+            CreateGameCubeTab(&state);
+            break;
+          case Wii:
+            CreateWiiTab(&state);
+            break;
+          case Paths:
+            CreatePathsTab(&state);
+            break;
+          case Advanced:
+            CreateAdvancedTab(&state);
+            break;
+          case About:
+            ImGui::TextWrapped(
+                "Dolphin Emulator on UWP - Version 1.15\n\n"
+                "This is a fork of Dolphin Emulator introducing Xbox support with a big picture frontend, developed by SirMangler.\n"
+                "Support me on Ko-Fi: https://ko-fi.com/sirmangler\n\n"
+                "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
+            break;
         }
 
-        if (ImGui::BeginTabItem("Graphics"))
-        {
-          CreateGraphicsTab(&state);
-          ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("GameCube"))
-        {
-          CreateGameCubeTab(&state);
-          ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Wii"))
-        {
-          CreateWiiTab(&state);
-          ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Paths & Folders"))
-        {
-          CreatePathsTab(&state);
-          ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Advanced"))
-        {
-          CreateAdvancedTab(&state);
-          ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("About"))
-        {
-          ImGui::TextWrapped(
-              "Dolphin Emulator UWP - Version 1.14\n\nThis fork was developed by SirMangler.\n\n"
-              "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
-          ImGui::EndTabItem();
-        }
-
-        ImGui::EndTabBar();
+        ImGui::EndChild();
         ImGui::End();
       }
     }
@@ -603,12 +613,33 @@ void ImGuiFrontend::CreateGraphicsTab(UIState* state)
     Config::Save();
   }
 
+  bool disableFog = Config::Get(Config::GFX_DISABLE_FOG);
+  if (ImGui::Checkbox("Disable Fog", &disableFog))
+  {
+    Config::SetBaseOrCurrent(Config::GFX_DISABLE_FOG, disableFog);
+    Config::Save();
+  }
+
+  bool perPixelLighting = Config::Get(Config::GFX_ENABLE_PIXEL_LIGHTING);
+  if (ImGui::Checkbox("Per-Pixel Lighting", &perPixelLighting))
+  {
+    Config::SetBaseOrCurrent(Config::GFX_ENABLE_PIXEL_LIGHTING, perPixelLighting);
+    Config::Save();
+  }
+
+  bool disableCopyFilter = Config::Get(Config::GFX_ENHANCE_DISABLE_COPY_FILTER);
+  if (ImGui::Checkbox("Disable Copy Filter", &disableCopyFilter))
+  {
+    Config::SetBaseOrCurrent(Config::GFX_ENHANCE_DISABLE_COPY_FILTER, disableCopyFilter);
+    Config::Save();
+  }
+
   const char* ir_items[] = {"Auto (Multiple of 640x528)",      "Native (640x528)",
                             "2x Native (1280x1056) for 720p",  "3x Native (1920x1584) for 1080p",
                             "4x Native (2560x2112) for 1440p", "5x Native (3200x2640)",
                             "6x Native (3840x3168) for 4K",    "7x Native (4480x3696)",
-                            "8x Native (5120x4224) for 5K" };
-      
+                            "8x Native (5120x4224) for 5K"};
+
   int ir_idx = Config::Get(Config::GFX_EFB_SCALE);
 
   if (ImGui::TreeNode("Internal Resolution"))
@@ -653,23 +684,23 @@ void ImGuiFrontend::CreateGraphicsTab(UIState* state)
       ImGui::PushID(i);
       if (ImGui::RadioButton(aspect_items[i], i == aspect_idx))
       {
-          switch (i)
-          {
-          case 0:
+        switch (i)
+        {
+        case 0:
             Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Auto);
             break;
-          case 1:
+        case 1:
             Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::AnalogWide);
             break;
-          case 2:
+        case 2:
             Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Analog);
             break;
-          case 3:
+        case 3:
             Config::SetBaseOrCurrent(Config::GFX_ASPECT_RATIO, AspectMode::Stretch);
             break;
-          }
+        }
 
-          Config::Save();
+        Config::Save();
       }
       ImGui::PopID();
     }
@@ -704,27 +735,27 @@ void ImGuiFrontend::CreateGraphicsTab(UIState* state)
       ImGui::PushID(i);
       if (ImGui::RadioButton(shader_items[i], i == shader_idx))
       {
-          switch (i)
-          {
-          case 0:
+        switch (i)
+        {
+        case 0:
             Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
                                      ShaderCompilationMode::Synchronous);
             break;
-          case 1:
+        case 1:
             Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
                                      ShaderCompilationMode::AsynchronousUberShaders);
             break;
-          case 2:
+        case 2:
             Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
                                      ShaderCompilationMode::SynchronousUberShaders);
             break;
-          case 3:
+        case 3:
             Config::SetBaseOrCurrent(Config::GFX_SHADER_COMPILATION_MODE,
                                      ShaderCompilationMode::AsynchronousSkipRendering);
             break;
-          }
+        }
 
-          Config::Save();
+        Config::Save();
       }
       ImGui::PopID();
     }
@@ -763,8 +794,8 @@ void ImGuiFrontend::CreateGraphicsTab(UIState* state)
       ImGui::PushID(i);
       if (ImGui::RadioButton(aalevel_items[i], i == msaa))
       {
-          Config::SetBaseOrCurrent(Config::GFX_MSAA, i);
-          Config::Save();
+        Config::SetBaseOrCurrent(Config::GFX_MSAA, i);
+        Config::Save();
       }
       ImGui::PopID();
     }
@@ -782,34 +813,13 @@ void ImGuiFrontend::CreateGraphicsTab(UIState* state)
       ImGui::PushID(i);
       if (ImGui::RadioButton(anisolevel_items[i], i == aniso))
       {
-          Config::SetBaseOrCurrent(Config::GFX_ENHANCE_MAX_ANISOTROPY, i);
-          Config::Save();
+        Config::SetBaseOrCurrent(Config::GFX_ENHANCE_MAX_ANISOTROPY, i);
+        Config::Save();
       }
       ImGui::PopID();
     }
 
     ImGui::TreePop();
-  }
-
-  bool disableFog = Config::Get(Config::GFX_DISABLE_FOG);
-  if (ImGui::Checkbox("Disable Fog", &disableFog))
-  {
-    Config::SetBaseOrCurrent(Config::GFX_DISABLE_FOG, disableFog);
-    Config::Save();
-  }
-
-  bool perPixelLighting = Config::Get(Config::GFX_ENABLE_PIXEL_LIGHTING);
-  if (ImGui::Checkbox("Per-Pixel Lighting", &perPixelLighting))
-  {
-    Config::SetBaseOrCurrent(Config::GFX_ENABLE_PIXEL_LIGHTING, perPixelLighting);
-    Config::Save();
-  }
-
-  bool disableCopyFilter = Config::Get(Config::GFX_ENHANCE_DISABLE_COPY_FILTER);
-  if (ImGui::Checkbox("Disable Copy Filter", &disableCopyFilter))
-  {
-    Config::SetBaseOrCurrent(Config::GFX_ENHANCE_DISABLE_COPY_FILTER, disableCopyFilter);
-    Config::Save();
   }
 }
 

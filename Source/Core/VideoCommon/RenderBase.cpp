@@ -1162,7 +1162,10 @@ void Renderer::BeginImGuiFrameUnlocked()
   io.DeltaTime = time_diff_secs;
 
 #ifdef _UWP
-  if (g_controller_interface.HasDefaultDevice() && Pad::GetConfig()->IsControllerControlledByGamepadDevice(0) && Wiimote::GetConfig()->IsControllerControlledByGamepadDevice(0))
+  if (Core::IsRunningAndStarted() &&
+      g_controller_interface.HasDefaultDevice() &&
+      Pad::GetConfig()->IsControllerControlledByGamepadDevice(0) &&
+      Wiimote::GetConfig()->IsControllerControlledByGamepadDevice(0))
   {
     std::vector<std::unique_ptr<ControllerEmu::Control>>* btns = nullptr;
     std::vector<std::unique_ptr<ControllerEmu::Control>>* stick = nullptr;
@@ -1194,22 +1197,20 @@ void Renderer::BeginImGuiFrameUnlocked()
     dq.FromString(g_controller_interface.GetDefaultDeviceString());
     auto device = g_controller_interface.FindDevice(dq);
 
+    const auto WGINPUT = [=](std::string label) -> double {
+      return device->FindInput(label)->GetState() == 1.0 ? 1.0 : 0;
+    };
+
     if (device)
     {
       device->UpdateInput();
 
-      io.NavInputs[ImGuiNavInput_Activate] =
-          device->FindInput("Button A")->GetState() == 1.0 ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_Cancel] =
-          device->FindInput("Button B")->GetState() == 1.0 ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadUp] =
-          device->FindInput("Left Y+")->GetState() == 1.0 ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadDown] =
-          device->FindInput("Left Y-")->GetState() == 1.0 ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadLeft] =
-          device->FindInput("Left X-")->GetState() == 1.0 ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadRight] =
-          device->FindInput("Left X+")->GetState() == 1.0 ? 1.0 : 0;
+      io.NavInputs[ImGuiNavInput_Activate] = WGINPUT("Button A");
+      io.NavInputs[ImGuiNavInput_Cancel] = WGINPUT("Button B");
+      io.NavInputs[ImGuiNavInput_DpadUp] = WGINPUT("Left Y+") + WGINPUT("Pad N");
+      io.NavInputs[ImGuiNavInput_DpadDown] = WGINPUT("Left Y-") + WGINPUT("Pad S");
+      io.NavInputs[ImGuiNavInput_DpadLeft] = WGINPUT("Left X-") + WGINPUT("Pad W");
+      io.NavInputs[ImGuiNavInput_DpadRight] = WGINPUT("Left X+") + WGINPUT("Pad E");
     }
   }
 #endif
