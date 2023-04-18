@@ -362,14 +362,14 @@ u64 GetSize(FILE* f)
   const u64 pos = ftello(f);
   if (fseeko(f, 0, SEEK_END) != 0)
   {
-    ERROR_LOG_FMT(COMMON, "GetSize: seek failed {}: {}", fmt::ptr(f), LastStrerrorString());
+    ERROR_LOG_FMT(COMMON, "GetSize: seek failed {}: {}", fmt::ptr(f), Common::LastStrerrorString());
     return 0;
   }
 
   const u64 size = ftello(f);
   if ((size != pos) && (fseeko(f, pos, SEEK_SET) != 0))
   {
-    ERROR_LOG_FMT(COMMON, "GetSize: seek failed {}: {}", fmt::ptr(f), LastStrerrorString());
+    ERROR_LOG_FMT(COMMON, "GetSize: seek failed {}: {}", fmt::ptr(f), Common::LastStrerrorString());
     return 0;
   }
 
@@ -383,7 +383,7 @@ bool CreateEmptyFile(const std::string& filename)
 
   if (!File::IOFile(filename, "wb"))
   {
-    ERROR_LOG_FMT(COMMON, "CreateEmptyFile: failed {}: {}", filename, LastStrerrorString());
+    ERROR_LOG_FMT(COMMON, "CreateEmptyFile: failed {}: {}", filename, Common::LastStrerrorString());
     return false;
   }
 
@@ -730,7 +730,7 @@ std::string GetBundleDirectory()
 std::string GetExePath()
 {
 #ifdef _WIN32
-  auto exe_path = GetModuleName(nullptr);
+  auto exe_path = Common::GetModuleName(nullptr);
   if (!exe_path)
     return {};
   std::error_code error;
