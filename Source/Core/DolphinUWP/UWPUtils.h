@@ -49,7 +49,7 @@ inline std::string GetLocalFolder()
 
 #pragma warning(push)
 #pragma warning(disable : 4265)
-inline winrt::fire_and_forget OpenNewUserPicker(std::function<void()> folderPickedCallback)
+inline winrt::fire_and_forget OpenNewUserPicker(std::function<void(std::string)> folderPickedCallback)
 {
   std::string user_path =
       winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path()) +
@@ -63,10 +63,24 @@ inline winrt::fire_and_forget OpenNewUserPicker(std::function<void()> folderPick
   if (folder)
   {
     std::ofstream t(user_path);
-    t << winrt::to_string(folder.Path().data());
+    std::string p = winrt::to_string(folder.Path().data());
+    t << p;
+    folderPickedCallback(p);
   }
+  else
+  {
+    folderPickedCallback("");
+  }
+}
 
-  folderPickedCallback();
+inline bool TestPathPermissions(std::string path)
+{
+  auto p = path + "\\text.txt";
+  std::ofstream o(p);
+  bool success = o.good();
+  std::remove(p.c_str());
+
+  return success;
 }
 
 inline winrt::fire_and_forget OpenDiscPicker()

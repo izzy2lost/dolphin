@@ -123,6 +123,8 @@ std::string m_prev_list_search;
 std::vector<std::shared_ptr<UICommon::GameFile>> m_list_search_results;
 char m_list_search_buf[32];
 
+bool m_show_path_warning = false;
+
 ImGuiFrontend::ImGuiFrontend()
 {
   CoreWindow window = CoreWindow::GetForCurrentThread();
@@ -1155,9 +1157,16 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
     UWP::OpenGameFolderPicker([state](std::string path) {
       if (path != "")
       {
-        m_paths.emplace_back(path);
-        Config::SetIsoPaths(m_paths);
-        Config::Save();
+        if (!UWP::TestPathPermissions(path))
+        {
+          m_show_path_warning = true;
+        }
+        else
+        {
+          m_paths.emplace_back(path);
+          Config::SetIsoPaths(m_paths);
+          Config::Save();
+        }
       }
 
       state->controlsDisabled = false;
@@ -1170,7 +1179,15 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
   if (ImGui::Button("Set Dolphin User Folder Location"))
   {
     state->controlsDisabled = true;
-    UWP::OpenNewUserPicker([=]() {
+    UWP::OpenNewUserPicker([=](std::string path) {
+      if (path != "")
+      {
+        if (!UWP::TestPathPermissions(path))
+        {
+          m_show_path_warning = true;
+        }
+      }
+
       state->controlsDisabled = false;
     });
 
@@ -1190,6 +1207,26 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
     UICommon::SetUserDirectory(UWP::GetUserLocation());
     UICommon::CreateDirectories();
     UICommon::Init();
+  }
+
+  if (m_show_path_warning)
+  {
+    ImGui::OpenPopup("Warning");
+    m_show_path_warning = false;
+    ImGui::SetNextWindowSize(ImVec2(950 * m_frameScale, 80 * m_frameScale));
+  }
+
+  if (ImGui::BeginPopupModal("Warning"))
+  {
+    ImGui::TextWrapped("The folder path you have selected is not writable! Please check that you "
+                       "have the correct permissions for the folder you have selected.");
+    ImGui::Separator();
+    if (ImGui::Button("OK"))
+    {
+      ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
   }
 
   ImGui::Spacing();
