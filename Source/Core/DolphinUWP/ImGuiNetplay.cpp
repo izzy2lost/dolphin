@@ -24,6 +24,7 @@
 #include "Core/SyncIdentifier.h"
 
 #include "Common/WindowSystemInfo.h"
+#include "Common/HttpRequest.h"
 
 #include "UICommon/GameFile.h"
 #include "UICommon/UICommon.h"
@@ -49,6 +50,7 @@ bool m_prompt_warning = false;
 
 std::string m_prev_search;
 std::vector<std::shared_ptr<UICommon::GameFile>> m_search_results;
+Common::Lazy<std::string> m_external_ip;
 
 ImGuiNetPlay::ImGuiNetPlay(ImGuiFrontend* frontend, std::vector<std::shared_ptr<UICommon::GameFile>> games, float frame_scale)
     : m_frontend(frontend), m_games(games), m_frameScale(frame_scale)
@@ -81,7 +83,14 @@ void ImGuiNetPlay::DrawLobby()
       }
       else
       {
-        address = g_netplay_server->GetInterfaceHost("External");
+        if (!m_external_ip->empty())
+        {
+          address = m_external_ip->c_str();
+        }
+        else
+        {
+          address = "Unknown";
+        }
       }
 
       ImGui::Text(m_traversal ? "Lobby Code: %s" : "External IP: %s", address);
@@ -94,12 +103,13 @@ void ImGuiNetPlay::DrawLobby()
     }
     ImGui::Spacing();
 
+    auto players = g_netplay_client->GetPlayers();
     if (ImGui::BeginTable("players", 2))
     {
       ImGui::TableSetupColumn("Player");
       ImGui::TableSetupColumn("Latency");
       ImGui::TableHeadersRow();
-      for (auto& player : g_netplay_client->GetPlayers())
+      for (auto& player : players)
       {
         ImGui::TableNextColumn();
         ImGui::Text("%s", player->name.c_str());
@@ -121,6 +131,113 @@ void ImGuiNetPlay::DrawLobby()
         Config::Save();
         g_netplay_server->AdjustPadBufferSize(static_cast<unsigned int>(pad_buffer));
       }
+
+      if (ImGui::BeginTable("gc-slots", 4))
+      {
+        ImGui::TableNextColumn();
+        ImGui::Text("GC Pad 1");
+        ImGui::TableNextColumn();
+        ImGui::Text("GC Pad 2");
+        ImGui::TableNextColumn();
+        ImGui::Text("GC Pad 3");
+        ImGui::TableNextColumn();
+        ImGui::Text("GC Pad 4");
+
+        ImGui::TableNextRow();
+
+        auto gc_mapping = g_netplay_server->GetPadMapping();
+        for (uint32_t port = 0; port < 4; port++)
+        {
+          ImGui::TableNextColumn();
+          std::string selected_player = "None";
+          for (auto player : players)
+          {
+            if (gc_mapping[port] == player->pid)
+            {
+              selected_player = player->name;
+              break;
+            }
+          }
+
+          if (ImGui::BeginCombo(std::format("##port-{}", port).c_str(), selected_player.c_str()))
+          {
+            for (auto& player : players)
+            {
+              if (ImGui::Selectable(player->name.c_str(), gc_mapping[port] == player->pid))
+              {
+                gc_mapping[port] = player->pid;
+                g_netplay_server->SetPadMapping(gc_mapping);
+              }
+            }
+
+            if (ImGui::Selectable("None", gc_mapping[port] == 0))
+            {
+              gc_mapping[port] = 0;
+              g_netplay_server->SetPadMapping(gc_mapping);
+            }
+
+            ImGui::EndCombo();
+          }
+        }
+
+        ImGui::EndTable();
+      }
+
+      ImGui::Spacing();
+
+      if (ImGui::BeginTable("wii-slots", 4))
+      {
+        ImGui::TableNextColumn();
+        ImGui::Text("Wii Pad 1");
+        ImGui::TableNextColumn();
+        ImGui::Text("Wii Pad 2");
+        ImGui::TableNextColumn();
+        ImGui::Text("Wii Pad 3");
+        ImGui::TableNextColumn();
+        ImGui::Text("Wii Pad 4");
+
+        ImGui::TableNextRow();
+
+        auto wii_mapping = g_netplay_server->GetWiimoteMapping();
+        for (uint32_t port = 0; port < 4; port++)
+        {
+          std::string selected_player = "None";
+          for (auto player : players)
+          {
+            if (wii_mapping[port] == player->pid)
+            {
+              selected_player = player->name;
+              break;
+            }
+          }
+
+          ImGui::TableNextColumn();
+          if (ImGui::BeginCombo(std::format("##wiiport-{}", port).c_str(), selected_player.c_str()))
+          {
+            for (auto& player : g_netplay_client->GetPlayers())
+            {
+              if (ImGui::Selectable(player->name.c_str(), wii_mapping[port] == player->pid))
+              {
+                wii_mapping[port] = player->pid;
+                g_netplay_server->SetWiimoteMapping(wii_mapping);
+              }
+            }
+
+            if (ImGui::Selectable("None", wii_mapping[port] == 0))
+            {
+              wii_mapping[port] = 0;
+              g_netplay_server->SetWiimoteMapping(wii_mapping);
+            }
+
+            ImGui::EndCombo();
+          }
+        }
+
+        ImGui::EndTable();
+      }
+
+      ImGui::Spacing();
+      ImGui::Spacing();
 
       if (ImGui::Button("Start Game"))
       {
@@ -417,6 +534,18 @@ void ImGuiNetPlay::DrawSetup()
             g_netplay_client = std::make_shared<NetPlay::NetPlayClient>(
                 host_ip, host_port, this, nickname,
                 NetPlay::NetTraversalConfig{false, traversal_host, traversal_port});
+
+            m_external_ip = Common::Lazy<std::string>([]() -> std::string {
+              Common::HttpRequest request;
+              // ENet does not support IPv6, so IPv4 has to be used
+              request.UseIPv4();
+              Common::HttpRequest::Response response =
+                  request.Get("https://ip.dolphin-emu.org/", {{"X-Is-Dolphin", "1"}});
+
+              if (response.has_value())
+                return std::string(response->begin(), response->end());
+              return "";
+            });
           }
         }
       }
