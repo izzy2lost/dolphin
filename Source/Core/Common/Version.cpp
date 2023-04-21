@@ -34,7 +34,7 @@ const std::string& GetScmRevStr()
 
 const std::string& GetScmRevGitStr()
 {
-  static const std::string scm_rev_git_str = SCM_REV_STR;
+  static const std::string scm_rev_git_str = "6d8cabac49b29578f729d765357ad84674547b40"; // set manually for Netplay
   return scm_rev_git_str;
 }
 
@@ -65,7 +65,7 @@ const std::string& GetScmUpdateTrackStr()
 const std::string& GetNetplayDolphinVer()
 {
 #ifdef _UWP
-  static const std::string netplay_dolphin_ver = SCM_DESC_STR " Xbox";
+  static const std::string netplay_dolphin_ver = "5.0-19260 Xbox"; // manually set since SCM messes us up
 #elif _WIN32
   static const std::string netplay_dolphin_ver = SCM_DESC_STR " Win";
 #elif __APPLE__

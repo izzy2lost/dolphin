@@ -238,6 +238,5 @@ void Nunchuk::LoadDefaults(const ControllerInterface& ciface)
     m_shake->SetControlExpression(i, "`Click 2`");
 #endif
   }
-#endif
 }
 }  // namespace WiimoteEmu

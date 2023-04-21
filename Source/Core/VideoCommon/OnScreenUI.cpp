@@ -102,6 +102,9 @@ bool OnScreenUI::Initialize(u32 width, u32 height, float scale)
     io.Fonts->TexID = font_tex.get();
 
     m_imgui_textures.push_back(std::move(font_tex));
+
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
   }
 
   if (!RecompileImGuiPipeline())
@@ -206,6 +209,7 @@ void OnScreenUI::BeginImGuiFrameUnlocked(u32 width, u32 height)
   io.DisplaySize =
       ImVec2(static_cast<float>(m_backbuffer_width), static_cast<float>(m_backbuffer_height));
   io.DeltaTime = time_diff_secs;
+  io.NavVisible = true;
 
 #ifdef _UWP
   if (Core::IsRunningAndStarted() && g_controller_interface.HasDefaultDevice() &&

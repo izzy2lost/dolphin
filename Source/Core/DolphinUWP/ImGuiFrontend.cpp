@@ -20,7 +20,6 @@
 #include "WinRTKeyboard.h"
 
 #include <imgui.h>
-#include <imgui_impl_dx11.h>
 
 #include <d3d11.h>
 #include <dxgi1_4.h>
@@ -66,13 +65,13 @@
 #include "UICommon/GameFileCache.h"
 
 #include "VideoCommon/VideoConfig.h"
+#include "VideoCommon/AbstractGfx.h"
+#include "VideoCommon/Present.h"
+#include "VideoCommon/OnScreenUI.h"
+#include "VideoCommon/VideoBackendBase.h"
 
 #include "InputCommon/ControllerInterface/CoreDevice.h"
 #include "InputCommon/ControllerInterface/WGInput/WGInput.h"
-#include <VideoCommon/VideoBackendBase.h>
-#include <Common/ScopeGuard.h>
-#include "VideoCommon/RenderBase.h"
-#include <VideoBackends/D3D12/DX12Texture.h>
 
 namespace WGI = winrt::Windows::Gaming::Input;
 using winrt::Windows::UI::Core::CoreWindow;
@@ -384,9 +383,10 @@ FrontendResult ImGuiFrontend::RunMainLoop()
       UWP::g_char_buffer.clear();
     }
 
-    g_renderer->BeginUIFrame();
-
-    // Draw Background first
+    // g_presenter->GetOnScreenUI()->BeginImGuiFrame(g_presenter->GetBackbufferWidth(),
+    //                                               g_presenter->GetBackbufferHeight());
+    //
+    //  Draw Background first
 
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -398,7 +398,8 @@ FrontendResult ImGuiFrontend::RunMainLoop()
     if (ImGui::Begin("Background", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoTitleBar |
                          ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
-      ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav)) {
+                         ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoNav))
+    {
       ImGui::Image(GetOrCreateBackgroundTex(state.showListView), ImGui::GetIO().DisplaySize);
       ImGui::End();
     }
@@ -422,21 +423,45 @@ FrontendResult ImGuiFrontend::RunMainLoop()
     {
       ImGui::SetNextWindowSize(ImVec2(540 * m_frameScale, 425 * m_frameScale));
       ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x / 2 - (540 / 2) * m_frameScale,
-                                         ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
+                                     ImGui::GetIO().DisplaySize.y / 2 - (425 / 2) * m_frameScale));
       if (ImGui::Begin("Settings", nullptr,
                        ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
                            ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize))
       {
         if (ImGui::BeginListBox("##tabs", ImVec2(100 * m_frameScale, -1)))
         {
-          if (ImGui::Selectable("General", state.selectedTab == General)) { state.selectedTab = General; }
-          if (ImGui::Selectable("Interface", state.selectedTab == Interface)) { state.selectedTab = Interface; }
-          if (ImGui::Selectable("Graphics", state.selectedTab == Graphics)) { state.selectedTab = Graphics; }
-          if (ImGui::Selectable("GameCube", state.selectedTab == GC)) { state.selectedTab = GC; }
-          if (ImGui::Selectable("Wii", state.selectedTab == Wii)) { state.selectedTab = Wii; }
-          if (ImGui::Selectable("Paths", state.selectedTab == Paths)) { state.selectedTab = Paths; }
-          if (ImGui::Selectable("Advanced", state.selectedTab == Advanced)) { state.selectedTab = Advanced; }
-          if (ImGui::Selectable("About", state.selectedTab == About)) { state.selectedTab = About; }
+          if (ImGui::Selectable("General", state.selectedTab == General))
+          {
+            state.selectedTab = General;
+          }
+          if (ImGui::Selectable("Interface", state.selectedTab == Interface))
+          {
+            state.selectedTab = Interface;
+          }
+          if (ImGui::Selectable("Graphics", state.selectedTab == Graphics))
+          {
+            state.selectedTab = Graphics;
+          }
+          if (ImGui::Selectable("GameCube", state.selectedTab == GC))
+          {
+            state.selectedTab = GC;
+          }
+          if (ImGui::Selectable("Wii", state.selectedTab == Wii))
+          {
+            state.selectedTab = Wii;
+          }
+          if (ImGui::Selectable("Paths", state.selectedTab == Paths))
+          {
+            state.selectedTab = Paths;
+          }
+          if (ImGui::Selectable("Advanced", state.selectedTab == Advanced))
+          {
+            state.selectedTab = Advanced;
+          }
+          if (ImGui::Selectable("About", state.selectedTab == About))
+          {
+            state.selectedTab = About;
+          }
 
           ImGui::EndListBox();
         }
@@ -445,34 +470,35 @@ FrontendResult ImGuiFrontend::RunMainLoop()
         ImGui::BeginChild("##tabview", ImVec2(-1, -1), true);
         switch (state.selectedTab)
         {
-          case General:
-            CreateGeneralTab(&state);
-            break;
-          case Interface:
-            CreateInterfaceTab(&state);
-            break;
-          case Graphics:
-            CreateGraphicsTab(&state);
-            break;
-          case GC:
-            CreateGameCubeTab(&state);
-            break;
-          case Wii:
-            CreateWiiTab(&state);
-            break;
-          case Paths:
-            CreatePathsTab(&state);
-            break;
-          case Advanced:
-            CreateAdvancedTab(&state);
-            break;
-          case About:
-            ImGui::TextWrapped(
-                "Dolphin Emulator on UWP - Version 1.15\n\n"
-                "This is a fork of Dolphin Emulator introducing Xbox support with a big picture frontend, developed by SirMangler.\n"
-                "Support me on Ko-Fi: https://ko-fi.com/sirmangler\n\n"
-                "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
-            break;
+        case General:
+          CreateGeneralTab(&state);
+          break;
+        case Interface:
+          CreateInterfaceTab(&state);
+          break;
+        case Graphics:
+          CreateGraphicsTab(&state);
+          break;
+        case GC:
+          CreateGameCubeTab(&state);
+          break;
+        case Wii:
+          CreateWiiTab(&state);
+          break;
+        case Paths:
+          CreatePathsTab(&state);
+          break;
+        case Advanced:
+          CreateAdvancedTab(&state);
+          break;
+        case About:
+          ImGui::TextWrapped(
+              "Dolphin Emulator on UWP - Version 1.15\n\n"
+              "This is a fork of Dolphin Emulator introducing Xbox support with a big picture "
+              "frontend, developed by SirMangler.\n"
+              "Support me on Ko-Fi: https://ko-fi.com/sirmangler\n\n"
+              "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
+          break;
         }
 
         ImGui::EndChild();
@@ -499,10 +525,8 @@ FrontendResult ImGuiFrontend::RunMainLoop()
     if (!state.controlsDisabled)
       RefreshControls(!state.showSettingsWindow);
 
-    g_renderer->EndUIFrame();
+    g_presenter->Present();
   }
-
-  g_renderer->EndUIFrame();
 
   return selection;
 }
@@ -1491,7 +1515,7 @@ ImGuiFrontend::CreateCoverTexture(std::shared_ptr<UICommon::GameFile> game)
                             AbstractTextureFormat::RGBA8, 0);
 
   std::unique_ptr<AbstractTexture> cover_tex =
-      g_renderer->CreateTexture(cover_tex_config, game->GetShortName());
+      g_gfx->CreateTexture(cover_tex_config, game->GetShortName());
   if (!cover_tex)
   {
     PanicAlertFmt("Failed to create ImGui texture");
@@ -1543,7 +1567,7 @@ AbstractTexture* ImGuiFrontend::GetOrCreateBackgroundTex(bool list_view)
   TextureConfig bg_tex_config(width, height, 1, 1, 1, AbstractTextureFormat::RGBA8, 0);
 
   std::unique_ptr<AbstractTexture> bg_tex =
-      g_renderer->CreateTexture(bg_tex_config, list_view ? "background1" : "background2");
+      g_gfx->CreateTexture(bg_tex_config, list_view ? "background1" : "background2");
   if (!bg_tex)
   {
     PanicAlertFmt("Failed to create ImGui texture");
@@ -1584,7 +1608,7 @@ AbstractTexture* ImGuiFrontend::GetOrCreateMissingTex()
   TextureConfig missing_tex_config(width, height, 1, 1, 1, AbstractTextureFormat::RGBA8, 0);
 
   std::unique_ptr<AbstractTexture> missing_tex =
-      g_renderer->CreateTexture(missing_tex_config, "missing");
+      g_gfx->CreateTexture(missing_tex_config, "missing");
   if (!missing_tex)
   {
     PanicAlertFmt("Failed to create ImGui texture");

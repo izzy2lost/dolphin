@@ -76,6 +76,7 @@ public:
                                  const MathUtil::Rectangle<int>& source_rc);
 
   VideoCommon::PostProcessing* GetPostProcessor() const { return m_post_processor.get(); }
+  VideoCommon::OnScreenUI* GetOnScreenUI() const { return m_onscreen_ui.get(); }
   // Final surface changing
   // This is called when the surface is resized (WX) or the window changes (Android).
   void ChangeSurface(void* new_surface_handle);

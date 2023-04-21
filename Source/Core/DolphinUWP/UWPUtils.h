@@ -1,8 +1,5 @@
 #pragma once
 
-#include <Common/FileUtil.h>
-#include <Core/HW/Wiimote.h>
-
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Pickers.h>
 #include <winrt/Windows.Foundation.h>
@@ -11,10 +8,15 @@
 #include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/Windows.UI.Core.h>
 
-#include <ppltasks.h>
+#include <Common/FileUtil.h>
+
+#include <Core/HW/Wiimote.h>
 #include <Core/Core.h>
 #include <Core/HW/WiimoteEmu/WiimoteEmu.h>
 #include <Core/HW/DVD/DVDInterface.h>
+#include <Core/System.h>
+
+#include <ppltasks.h>
 
 using namespace winrt;
 using namespace winrt::Windows::Storage::Pickers;
@@ -103,8 +105,10 @@ inline winrt::fire_and_forget OpenDiscPicker()
   auto file = co_await openPicker.PickSingleFileAsync();
   if (file)
   {
-    Core::RunAsCPUThread(
-        [&file] { DVDInterface::ChangeDisc(winrt::to_string(file.Path().data())); });
+    Core::RunAsCPUThread([&file] {
+      auto& system = Core::System::GetInstance();
+      system.GetDVDInterface().ChangeDisc(winrt::to_string(file.Path().data()));
+    });
   }
 }
 
