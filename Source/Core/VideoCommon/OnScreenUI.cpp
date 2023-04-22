@@ -212,56 +212,25 @@ void OnScreenUI::BeginImGuiFrameUnlocked(u32 width, u32 height)
   io.NavVisible = true;
 
 #ifdef _UWP
-  if (Core::IsRunningAndStarted() && g_controller_interface.HasDefaultDevice() &&
-      Pad::GetConfig()->IsControllerControlledByGamepadDevice(0) &&
-      Wiimote::GetConfig()->IsControllerControlledByGamepadDevice(0))
+  // Fallback to a generic profile, which is needed for the frontend.
+  ciface::Core::DeviceQualifier dq;
+  dq.FromString(g_controller_interface.GetDefaultDeviceString());
+  auto device = g_controller_interface.FindDevice(dq);
+
+  const auto WGINPUT = [=](std::string label) -> double {
+    return device->FindInput(label)->GetState() == 1.0 ? 1.0 : 0;
+  };
+
+  if (device)
   {
-    std::vector<std::unique_ptr<ControllerEmu::Control>>* btns = nullptr;
-    std::vector<std::unique_ptr<ControllerEmu::Control>>* stick = nullptr;
+    device->UpdateInput();
 
-    if (SConfig::GetInstance().bWii)
-    {
-      btns = &Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Buttons)->controls;
-      stick = &Wiimote::GetNunchukGroup(0, WiimoteEmu::NunchukGroup::Stick)->controls;
-    }
-    else
-    {
-      btns = &Pad::GetGroup(0, PadGroup::Buttons)->controls;
-      stick = &Pad::GetGroup(0, PadGroup::MainStick)->controls;
-    }
-
-    if (btns != nullptr && stick != nullptr)
-    {
-      io.NavInputs[ImGuiNavInput_Activate] = btns->at(0)->GetState() == 1.0f ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_Cancel] = btns->at(1)->GetState() == 1.0f ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadUp] = stick->at(0)->GetState() == 1.0f ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadDown] = stick->at(1)->GetState() == 1.0f ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadLeft] = stick->at(2)->GetState() == 1.0f ? 1.0 : 0;
-      io.NavInputs[ImGuiNavInput_DpadRight] = stick->at(3)->GetState() == 1.0f ? 1.0 : 0;
-    }
-  }
-  else
-  {
-    // Fallback to a generic profile, which is needed for the frontend.
-    ciface::Core::DeviceQualifier dq;
-    dq.FromString(g_controller_interface.GetDefaultDeviceString());
-    auto device = g_controller_interface.FindDevice(dq);
-
-    const auto WGINPUT = [=](std::string label) -> double {
-      return device->FindInput(label)->GetState() == 1.0 ? 1.0 : 0;
-    };
-
-    if (device)
-    {
-      device->UpdateInput();
-
-      io.NavInputs[ImGuiNavInput_Activate] = WGINPUT("Button A");
-      io.NavInputs[ImGuiNavInput_Cancel] = WGINPUT("Button B");
-      io.NavInputs[ImGuiNavInput_DpadUp] = WGINPUT("Left Y+") + WGINPUT("Pad N");
-      io.NavInputs[ImGuiNavInput_DpadDown] = WGINPUT("Left Y-") + WGINPUT("Pad S");
-      io.NavInputs[ImGuiNavInput_DpadLeft] = WGINPUT("Left X-") + WGINPUT("Pad W");
-      io.NavInputs[ImGuiNavInput_DpadRight] = WGINPUT("Left X+") + WGINPUT("Pad E");
-    }
+    io.NavInputs[ImGuiNavInput_Activate] = WGINPUT("Button A");
+    io.NavInputs[ImGuiNavInput_Cancel] = WGINPUT("Button B");
+    io.NavInputs[ImGuiNavInput_DpadUp] = WGINPUT("Left Y+") + WGINPUT("Pad N");
+    io.NavInputs[ImGuiNavInput_DpadDown] = WGINPUT("Left Y-") + WGINPUT("Pad S");
+    io.NavInputs[ImGuiNavInput_DpadLeft] = WGINPUT("Left X-") + WGINPUT("Pad W");
+    io.NavInputs[ImGuiNavInput_DpadRight] = WGINPUT("Left X+") + WGINPUT("Pad E");
   }
 #endif
 
@@ -399,6 +368,7 @@ void OnScreenUI::Finalize()
   g_perf_metrics.DrawImGuiStats(m_backbuffer_scale);
   DrawDebugText();
   OSD::DrawMessages();
+  OSD::DrawMenu();
   ImGui::Render();
 }
 

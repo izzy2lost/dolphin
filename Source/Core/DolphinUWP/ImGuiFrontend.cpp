@@ -51,6 +51,7 @@
 #include "Core/Config/SYSCONFSettings.h"
 #include "Core/TitleDatabase.h"
 #include "Core/HW/EXI/EXI_Device.h"
+#include "Core/HW/GCPad.h"
 #include "Core/NetPlayClient.h"
 #include "Core/NetPlayProto.h"
 #include "Core/NetPlayServer.h"
@@ -59,6 +60,7 @@
 #include "Common/FileUtil.h"
 #include "Common/Image.h"
 #include "Common/Timer.h"
+#include "Common/FileSearch.h"
 
 #include "UICommon/UICommon.h"
 #include "UICommon/GameFile.h"
@@ -70,6 +72,7 @@
 #include "VideoCommon/OnScreenUI.h"
 #include "VideoCommon/VideoBackendBase.h"
 
+#include "InputCommon/InputConfig.h"
 #include "InputCommon/ControllerInterface/CoreDevice.h"
 #include "InputCommon/ControllerInterface/WGInput/WGInput.h"
 
@@ -121,8 +124,14 @@ std::chrono::high_resolution_clock::time_point m_scroll_last = std::chrono::high
 std::string m_prev_list_search;
 std::vector<std::shared_ptr<UICommon::GameFile>> m_list_search_results;
 char m_list_search_buf[32];
-
 bool m_show_path_warning = false;
+
+std::vector<std::string> m_wiimote_profiles;
+std::string m_selected_wiimote_profile[] = {"", "", "", ""};
+std::vector<std::string> m_gc_profiles;
+std::string m_selected_gc_profile[] = {"", "", "", ""};
+
+constexpr const char* PROFILES_DIR = "Profiles/";
 
 ImGuiFrontend::ImGuiFrontend()
 {
@@ -170,6 +179,37 @@ ImGuiFrontend::ImGuiFrontend()
   }
 
   ImGui::GetIO().KeyMap[ImGuiKey_Backspace] = '\b';
+
+  std::string profiles_path =
+      File::GetUserPath(D_CONFIG_IDX) + PROFILES_DIR + Wiimote::GetConfig()->GetProfileName();
+  for (const auto& filename : Common::DoFileSearch({profiles_path}, {".ini"}))
+  {
+    std::string basename;
+    SplitPath(filename, nullptr, &basename, nullptr);
+    if (!basename.empty())
+      m_wiimote_profiles.emplace_back(basename);
+  }
+
+  m_wiimote_profiles.emplace_back("None");
+  m_wiimote_profiles.emplace_back("Wiimote + Nunchuk");
+  m_wiimote_profiles.emplace_back("Classic Controller");
+  m_wiimote_profiles.emplace_back("Sideways Wiimote");
+
+  profiles_path =
+      File::GetUserPath(D_CONFIG_IDX) + PROFILES_DIR + Pad::GetConfig()->GetProfileName();
+  for (const auto& filename : Common::DoFileSearch({profiles_path}, {".ini"}))
+  {
+    std::string basename;
+    SplitPath(filename, nullptr, &basename, nullptr);
+    if (!basename.empty())
+      m_gc_profiles.emplace_back(basename);
+  }
+
+  m_gc_profiles.emplace_back("None");
+  m_gc_profiles.emplace_back("Default");
+
+  Wiimote::LoadConfig();
+  Pad::LoadConfig();
 
   PopulateControls();
   LoadGameList();
@@ -383,11 +423,7 @@ FrontendResult ImGuiFrontend::RunMainLoop()
       UWP::g_char_buffer.clear();
     }
 
-    // g_presenter->GetOnScreenUI()->BeginImGuiFrame(g_presenter->GetBackbufferWidth(),
-    //                                               g_presenter->GetBackbufferHeight());
-    //
-    //  Draw Background first
-
+    // -- Draw Background first
     ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
     ImGui::SetNextWindowPos(ImVec2(0, 0));
 
@@ -442,6 +478,10 @@ FrontendResult ImGuiFrontend::RunMainLoop()
           {
             state.selectedTab = Graphics;
           }
+          if (ImGui::Selectable("Controls", state.selectedTab == Controls))
+          {
+            state.selectedTab = Controls;
+          }
           if (ImGui::Selectable("GameCube", state.selectedTab == GC))
           {
             state.selectedTab = GC;
@@ -467,41 +507,47 @@ FrontendResult ImGuiFrontend::RunMainLoop()
         }
 
         ImGui::SameLine();
-        ImGui::BeginChild("##tabview", ImVec2(-1, -1), true);
-        switch (state.selectedTab)
+        if (ImGui::BeginChild("##tabview", ImVec2(-1, -1), true))
         {
-        case General:
-          CreateGeneralTab(&state);
-          break;
-        case Interface:
-          CreateInterfaceTab(&state);
-          break;
-        case Graphics:
-          CreateGraphicsTab(&state);
-          break;
-        case GC:
-          CreateGameCubeTab(&state);
-          break;
-        case Wii:
-          CreateWiiTab(&state);
-          break;
-        case Paths:
-          CreatePathsTab(&state);
-          break;
-        case Advanced:
-          CreateAdvancedTab(&state);
-          break;
-        case About:
-          ImGui::TextWrapped(
-              "Dolphin Emulator on UWP - Version 1.15\n\n"
-              "This is a fork of Dolphin Emulator introducing Xbox support with a big picture "
-              "frontend, developed by SirMangler.\n"
-              "Support me on Ko-Fi: https://ko-fi.com/sirmangler\n\n"
-              "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
-          break;
+          switch (state.selectedTab)
+          {
+          case General:
+            CreateGeneralTab(&state);
+            break;
+          case Interface:
+            CreateInterfaceTab(&state);
+            break;
+          case Graphics:
+            CreateGraphicsTab(&state);
+            break;
+          case Controls:
+            CreateControlsTab(&state);
+            break;
+          case GC:
+            CreateGameCubeTab(&state);
+            break;
+          case Wii:
+            CreateWiiTab(&state);
+            break;
+          case Paths:
+            CreatePathsTab(&state);
+            break;
+          case Advanced:
+            CreateAdvancedTab(&state);
+            break;
+          case About:
+            ImGui::TextWrapped(
+                "Dolphin Emulator on UWP - Version 1.15\n\n"
+                "This is a fork of Dolphin Emulator introducing Xbox support with a big picture "
+                "frontend, developed by SirMangler.\n"
+                "Support me on Ko-Fi: https://ko-fi.com/sirmangler\n\n"
+                "Dolphin Emulator is licensed under GPLv2+ and is not associated with Nintendo.");
+            break;
+          }
+          
+          ImGui::EndChild();
         }
-
-        ImGui::EndChild();
+        
         ImGui::End();
       }
     }
@@ -846,6 +892,33 @@ void ImGuiFrontend::CreateGraphicsTab(UIState* state)
     }
 
     ImGui::TreePop();
+  }
+}
+
+void ImGuiFrontend::CreateControlsTab(UIState* state)
+{
+  auto devices = g_controller_interface.GetAllDeviceStrings();
+
+  if (ImGui::BeginTabBar("controlsbar"))
+  {
+    if (ImGui::BeginTabItem("GameCube"))
+    {
+      for (int i = 0; i < 4; i++)
+      {
+        CreateGCPort(i, devices);
+      }
+      ImGui::EndTabItem();
+    }
+
+    if (ImGui::BeginTabItem("Wii"))
+    {
+      for (int i = 0; i < 4; i++)
+      {
+        CreateWiiPort(i, devices);
+      }
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
   }
 }
 
@@ -1257,6 +1330,152 @@ void ImGuiFrontend::CreatePathsTab(UIState* state)
   ImGui::Separator();
   ImGui::TextWrapped("Note: Please remember to do your USB filesystem setup, or paths to "
                      "your USB will not work properly!");
+}
+
+void ImGuiFrontend::CreateWiiPort(int index, std::vector<std::string> devices)
+{
+  if (ImGui::BeginChild(std::format("gc-wii-{}", index).c_str(), ImVec2(-1, 150), true))
+  {
+    auto controller = Wiimote::GetConfig()->GetController(index);
+    auto default_device = controller->GetDefaultDevice().name;
+
+    ImGui::Text("Wiimote Port %d", index + 1);
+
+    if (ImGui::BeginCombo("Device", default_device.c_str()))
+    {
+      for (auto device : devices)
+      {
+        if (ImGui::Selectable(device.c_str(), strcmp(default_device.c_str(), device.c_str()) == 0))
+        {
+            controller->SetDefaultDevice(device);
+            controller->UpdateReferences(g_controller_interface);
+        }
+      }
+
+      ImGui::EndCombo();
+    }
+
+    if (ImGui::BeginCombo("Profile", m_selected_wiimote_profile[index].c_str()))
+    {
+      for (auto profile : m_wiimote_profiles)
+      {
+        if (ImGui::Selectable(profile.c_str(), m_selected_wiimote_profile[index] == profile))
+        {
+            m_selected_wiimote_profile[index] = profile;
+
+            if (m_selected_wiimote_profile[index] == "None")
+            {
+              // Loading an empty inifile section clears everything.
+              Common::IniFile::Section sec;
+              const auto default_device = controller->GetDefaultDevice();
+
+              controller->LoadConfig(&sec);
+              controller->SetDefaultDevice(default_device);
+            }
+            else if (m_selected_wiimote_profile[index] == "Wiimote + Nunchuk")
+            {
+              controller->LoadDefaults(g_controller_interface);
+            }
+            else if (m_selected_wiimote_profile[index] == "Classic Controller")
+            { 
+              Common::IniFile ini;
+              ini.Load(File::GetSysDirectory() + PROFILES_DIR +
+                       Wiimote::GetConfig()->GetProfileName() + "/Classic.ini");
+
+              controller->LoadConfig(ini.GetOrCreateSection("Profile"));
+            }
+            else if (m_selected_wiimote_profile[index] == "Sideways Wiimote")
+            { 
+              Common::IniFile ini;
+              ini.Load(File::GetSysDirectory() + PROFILES_DIR +
+                       Wiimote::GetConfig()->GetProfileName() + "/Sideways.ini");
+
+              controller->LoadConfig(ini.GetOrCreateSection("Profile"));
+            }
+            else
+            {
+              Common::IniFile ini;
+              ini.Load(File::GetUserPath(D_CONFIG_IDX) + PROFILES_DIR +
+                       Wiimote::GetConfig()->GetProfileName() + "/" + profile + ".ini");
+
+              controller->LoadConfig(ini.GetOrCreateSection("Profile"));
+            }
+
+            controller->UpdateReferences(g_controller_interface);
+            Wiimote::GetConfig()->SaveConfig();
+        }
+      }
+
+      ImGui::EndCombo();
+    }
+  }
+
+  ImGui::EndChild();
+}
+
+void ImGuiFrontend::CreateGCPort(int index, std::vector<std::string> devices)
+{
+  if (ImGui::BeginChild(std::format("gc-port-{}", index).c_str(), ImVec2(-1, 150), true))
+  {
+    auto controller = Pad::GetConfig()->GetController(index);
+    auto default_device = controller->GetDefaultDevice().name;
+
+    ImGui::Text("GameCube Port %d", index + 1);
+
+    if (ImGui::BeginCombo("Device", default_device.c_str()))
+    {
+      for (auto device : devices)
+      {
+        if (ImGui::Selectable(device.c_str(), strcmp(default_device.c_str(), device.c_str()) == 0))
+        {
+            controller->SetDefaultDevice(device);
+            controller->UpdateReferences(g_controller_interface);
+        }
+      }
+
+      ImGui::EndCombo();
+    }
+
+    if (ImGui::BeginCombo("Profile", m_selected_gc_profile[index].c_str()))
+    {
+      for (auto profile : m_gc_profiles)
+      {
+        if (ImGui::Selectable(profile.c_str(), m_selected_gc_profile[index] == profile))
+        {
+            m_selected_gc_profile[index] = profile;
+
+            if (m_selected_gc_profile[index] == "None")
+            {
+              // Loading an empty inifile section clears everything.
+              Common::IniFile::Section sec;
+              const auto default_device = controller->GetDefaultDevice();
+
+              controller->LoadConfig(&sec);
+              controller->SetDefaultDevice(default_device);
+            }
+            else if (m_selected_gc_profile[index] == "Default")
+            {
+              controller->LoadDefaults(g_controller_interface);
+            }
+            else
+            {
+              Common::IniFile ini;
+              ini.Load(File::GetUserPath(D_CONFIG_IDX) + PROFILES_DIR +
+                       Pad::GetConfig()->GetProfileName() + "/" + profile + ".ini");
+
+              controller->LoadConfig(ini.GetOrCreateSection("Profile"));
+            }
+
+            controller->UpdateReferences(g_controller_interface);
+            Pad::GetConfig()->SaveConfig();
+        }
+      }
+
+      ImGui::EndCombo();
+    }
+  }
+
+  ImGui::EndChild();
 }
 
 FrontendResult ImGuiFrontend::CreateMainPage()

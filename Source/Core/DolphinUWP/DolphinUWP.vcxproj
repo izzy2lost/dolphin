@@ -5051,6 +5051,12 @@
     <None Include="Sys\GC\font_western.bin">
       <DeploymentContent>true</DeploymentContent>
     </None>
+    <None Include="Sys\Profiles\Wiimote\Classic.ini">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Sys\Profiles\Wiimote\Sideways.ini">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="Sys\totaldb.dsy">
       <DeploymentContent>true</DeploymentContent>
     </None>

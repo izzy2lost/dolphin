@@ -53,10 +53,14 @@ private:
   void CreateGeneralTab(UIState* state);
   void CreateInterfaceTab(UIState* state);
   void CreateGraphicsTab(UIState* state);
+  void CreateControlsTab(UIState* state);
   void CreateGameCubeTab(UIState* state);
   void CreateWiiTab(UIState* state);
   void CreateAdvancedTab(UIState* state);
   void CreatePathsTab(UIState* state);
+
+  void CreateWiiPort(int index, std::vector<std::string> devices);
+  void CreateGCPort(int index, std::vector<std::string> devices);
 
   void LoadGameList();
   void RecurseFolder(std::string path);

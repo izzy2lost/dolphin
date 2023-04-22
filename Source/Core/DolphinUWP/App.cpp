@@ -284,7 +284,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
       }
     }
-
     UICommon::SetUserDirectory(UWP::GetUserLocation());
     UICommon::CreateDirectories();
     UICommon::Init();
