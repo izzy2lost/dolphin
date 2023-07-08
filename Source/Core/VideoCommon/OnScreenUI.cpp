@@ -6,6 +6,7 @@
 #include "Common/EnumMap.h"
 #include "Common/Profiler.h"
 #include "Common/Timer.h"
+#include "Common/FileUtil.h"
 
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/NetplaySettings.h"
@@ -81,8 +82,11 @@ bool OnScreenUI::Initialize(u32 width, u32 height, float scale)
     ImGuiIO& io = ImGui::GetIO();
     ImFontConfig config;
     config.MergeMode = true;
-    io.Fonts->AddFontFromFileTTF("Sys/Resources/Roboto-Regular.ttf", 13, 0);
-    io.Fonts->AddFontFromFileTTF("Sys/Resources/NotoSansJP-Regular.ttf", 13, &config,
+    io.Fonts->AddFontFromFileTTF(
+        std::string(File::GetSysDirectory() + "Resources/Roboto-Regular.ttf").c_str(), 13, 0);
+    io.Fonts->AddFontFromFileTTF(
+        std::string(File::GetSysDirectory() + "Resources/NotoSansJP-Regular.ttf").c_str(), 13,
+        &config,
                                  io.Fonts->GetGlyphRangesJapanese());
 
     u8* font_tex_pixels;

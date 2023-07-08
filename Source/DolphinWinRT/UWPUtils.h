@@ -39,14 +39,17 @@ inline std::string GetUserLocation()
   }
   else
   {
-    return winrt::to_string(
-        winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path());
+    return winrt::to_string(winrt::Windows::Storage::ApplicationData::Current()
+                                .LocalFolder()
+                                .Path()) + "/Dolphin Emulator/";
   }
 }
 
 inline std::string GetLocalFolder()
 {
-  return winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path());
+  return winrt::to_string(
+             winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path()) +
+         "/Dolphin Emulator/";
 }
 
 #pragma warning(push)
@@ -55,6 +58,7 @@ inline winrt::fire_and_forget OpenNewUserPicker(std::function<void(std::string)>
 {
   std::string user_path =
       winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path()) +
+      "/Dolphin Emulator/" +
       "/user.txt";
   FolderPicker openPicker;
   openPicker.ViewMode(PickerViewMode::List);
@@ -141,10 +145,12 @@ inline void ResetUserLocation()
 {
   std::string user_path =
       winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path()) +
+      "/Dolphin Emulator/" +
       "/user.txt";
 
   std::ofstream t(user_path);
-  t << winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path());
+  t << winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalFolder().Path()) +
+           "/Dolphin Emulator/";
 }
 
 } // namespace UWP

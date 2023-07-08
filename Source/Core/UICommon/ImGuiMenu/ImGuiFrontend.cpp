@@ -1787,7 +1787,10 @@ void ImGuiFrontend::LoadGameList()
 
 #ifdef WINRT_XBOX
   // Load from the default path
-  auto localCachePath = winrt::to_string(winrt::Windows::Storage::ApplicationData::Current().LocalCacheFolder().Path());
+  auto localCachePath =
+      winrt::to_string(
+          winrt::Windows::Storage::ApplicationData::Current().LocalCacheFolder().Path()) +
+      "/Dolphin Emulator/";
   RecurseFolderForGames(localCachePath);
 #endif
 
@@ -1848,7 +1851,7 @@ void ImGuiFrontend::LoadThemes()
   m_themes.clear();
   m_selected_theme = nullptr;
 
-  RecurseForThemes("Sys/FrontendThemes/");
+  RecurseForThemes(File::GetSysDirectory() + "/FrontendThemes/");
   RecurseForThemes(File::GetUserPath(D_THEMES_IDX));
   
   if (!m_selected_theme)
