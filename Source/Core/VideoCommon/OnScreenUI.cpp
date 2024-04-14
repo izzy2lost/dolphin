@@ -434,6 +434,8 @@ void OnScreenUI::Finalize()
   g_perf_metrics.DrawImGuiStats(m_backbuffer_scale);
   DrawDebugText();
   OSD::DrawMessages();
+  OSD::DrawInGameMenu();
+
 #ifdef USE_RETRO_ACHIEVEMENTS
   DrawChallenges();
 #endif  // USE_RETRO_ACHIEVEMENTS
