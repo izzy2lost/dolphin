@@ -1,0 +1,37 @@
+name: Windows Dolphin Builder
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet.exe
+        uses: NuGet/setup-nuget@v2
+        with:
+          nuget-version: latest
+
+      - name: Build and Package Dolphin UWP Project
+        run: |
+          echo "Building and packaging the Dolphin UWP project..."
+          cd Source
+          msbuild dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /t:Restore,Build /p:RestorePackagesConfig=true /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile="DolphinWinRT_TemporaryKey.pfx" /p:DeployOnBuild=true /p:DeployTargetDevice=RemoteMachine /p:RemoteDebugMachine="XBOX"
+          echo "Build and packaging completed."
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: Dolphin-UWP-Build
+          path: Source/bin/Release
+          
