@@ -1,18 +1,18 @@
 name: Windows Dolphin Builder
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual dispatch of the workflow
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
-          submodules: true
-          fetch-depth: 0
+          submodules: true # Ensures submodules are checked out
+          fetch-depth: 0 # Ensures the full repository is checked out
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -21,6 +21,15 @@ jobs:
         uses: NuGet/setup-nuget@v2
         with:
           nuget-version: latest
+
+      - name: Verify SDL-UWP.vcxproj file exists
+        run: |
+          echo "Verifying SDL-UWP.vcxproj file..."
+          if [ ! -f "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj" ]; then
+            echo "SDL-UWP.vcxproj not found!"
+            exit 1
+          fi
+          echo "SDL-UWP.vcxproj found."
 
       - name: Build and Package Dolphin UWP Project
         run: |
@@ -34,4 +43,3 @@ jobs:
         with:
           name: Dolphin-UWP-Build
           path: Source/bin/Release
-          
