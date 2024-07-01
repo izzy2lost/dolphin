@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Repository
@@ -31,11 +31,30 @@ jobs:
             exit 1
           }
           Write-Output "SDL-UWP.vcxproj found."
+          Get-Location
+          Get-ChildItem "Externals/SDL/SDL/VisualC-WinRT"
+
+      - name: Verify Solution Configuration
+        shell: pwsh
+        run: |
+          Write-Output "Verifying solution configuration..."
+          $solutionPath = "Source/dolphin-emu.sln"
+          if (-Not (Test-Path $solutionPath)) {
+            Write-Error "Solution file not found!"
+            exit 1
+          }
+          $solutionContent = Get-Content $solutionPath
+          if ($solutionContent -notmatch "SDL-UWP") {
+            Write-Error "SDL-UWP project not found in solution configuration!"
+            exit 1
+          }
+          Write-Output "Solution configuration is correct."
 
       - name: Build and Package Dolphin UWP Project
         run: |
           echo "Building and packaging the Dolphin UWP project..."
           cd Source
+          echo "Current directory: $(pwd)"
           msbuild dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /t:Restore,Build /p:RestorePackagesConfig=true /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile="DolphinWinRT_TemporaryKey.pfx" /p:DeployOnBuild=true /p:DeployTargetDevice=RemoteMachine /p:RemoteDebugMachine="XBOX"
           echo "Build and packaging completed."
 
