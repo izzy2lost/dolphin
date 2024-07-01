@@ -34,6 +34,16 @@ jobs:
           Get-Location
           Get-ChildItem "Externals/SDL/SDL/VisualC-WinRT"
 
+      - name: Update Platform Toolset for SDL-UWP
+        shell: pwsh
+        run: |
+          Write-Output "Updating Platform Toolset for SDL-UWP..."
+          $projectPath = "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj"
+          $content = Get-Content $projectPath
+          $newContent = $content -replace 'v142', 'v143'
+          $newContent | Set-Content $projectPath
+          Write-Output "Platform Toolset updated to v143."
+
       - name: Verify Solution Configuration
         shell: pwsh
         run: |
