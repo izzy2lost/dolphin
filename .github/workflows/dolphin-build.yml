@@ -23,13 +23,14 @@ jobs:
           nuget-version: latest
 
       - name: Verify SDL-UWP.vcxproj file exists
+        shell: pwsh
         run: |
-          echo "Verifying SDL-UWP.vcxproj file..."
-          if [ ! -f "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj" ]; then
-            echo "SDL-UWP.vcxproj not found!"
+          Write-Output "Verifying SDL-UWP.vcxproj file..."
+          if (-Not (Test-Path "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj")) {
+            Write-Error "SDL-UWP.vcxproj not found!"
             exit 1
-          fi
-          echo "SDL-UWP.vcxproj found."
+          }
+          Write-Output "SDL-UWP.vcxproj found."
 
       - name: Build and Package Dolphin UWP Project
         run: |
