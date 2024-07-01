@@ -26,13 +26,14 @@ jobs:
         shell: pwsh
         run: |
           Write-Output "Verifying SDL-UWP.vcxproj file..."
-          if (-Not (Test-Path "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj")) {
-            Write-Error "SDL-UWP.vcxproj not found!"
+          $projectPath = "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj"
+          if (-Not (Test-Path $projectPath)) {
+            Write-Error "SDL-UWP.vcxproj not found at $projectPath!"
             exit 1
           }
-          Write-Output "SDL-UWP.vcxproj found."
+          Write-Output "SDL-UWP.vcxproj found at $projectPath."
           Get-Location
-          Get-ChildItem "Externals/SDL/SDL/VisualC-WinRT"
+          Get-ChildItem (Split-Path $projectPath)
 
       - name: Update Platform Toolset for SDL-UWP
         shell: pwsh
@@ -50,7 +51,7 @@ jobs:
           Write-Output "Verifying solution configuration..."
           $solutionPath = "Source/dolphin-emu.sln"
           if (-Not (Test-Path $solutionPath)) {
-            Write-Error "Solution file not found!"
+            Write-Error "Solution file not found at $solutionPath!"
             exit 1
           }
           $solutionContent = Get-Content $solutionPath
@@ -84,14 +85,6 @@ jobs:
           echo Current directory: %cd%
           msbuild dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /t:Restore,Build /p:RestorePackagesConfig=true /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile="DolphinWinRT_TemporaryKey.pfx" /p:DeployOnBuild=true /p:DeployTargetDevice=RemoteMachine /p:RemoteDebugMachine="XBOX"
           echo Build and packaging completed.
-
-      - name: Explicitly Build SDL-UWP Project
-        shell: cmd
-        run: |
-          echo Explicitly building SDL-UWP project...
-          cd Source
-          msbuild Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj /p:Configuration=Release /p:Platform=x64
-          echo SDL-UWP project build completed.
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
