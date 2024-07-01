@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Repository
@@ -44,11 +44,20 @@ jobs:
             exit 1
           }
           $solutionContent = Get-Content $solutionPath
-          if ($solutionContent -notmatch "SDL-UWP") {
+          if ($solutionContent -notmatch "SDL-UWP.vcxproj") {
             Write-Error "SDL-UWP project not found in solution configuration!"
             exit 1
           }
           Write-Output "Solution configuration is correct."
+          Write-Output "Checking project configuration in the solution..."
+          $configurations = Select-String -Path $solutionPath -Pattern "89E9B32E-A86A-47C3-A948-D2B1622925CE"
+          if ($configurations -eq $null) {
+            Write-Error "SDL-UWP project configurations not found in solution file!"
+            exit 1
+          }
+          Write-Output "SDL-UWP project configurations found in solution file."
+          Write-Output "Project configuration details:"
+          $configurations
 
       - name: Build and Package Dolphin UWP Project
         run: |
