@@ -68,23 +68,20 @@ jobs:
           nuget restore $env:SolutionPath
         shell: pwsh
 
-      - name: Build and Package Dolphin UWP Project
+      - name: Build Dolphin UWP Project
         shell: pwsh
         env:
           THUMBPRINT: ${{ env.THUMBPRINT }}
         run: |
-          Write-Output "Building and packaging the Dolphin UWP project..."
+          Write-Output "Building the Dolphin UWP project..."
           msbuild $env:SolutionPath `
             /p:Configuration=$env:Configuration `
             /p:Platform=$env:Platform `
             /p:AppxPackageSigningEnabled=true `
             /p:PackageCertificateThumbprint=$env:THUMBPRINT `
             /p:PackageCertificateKeyFile="mycert.pfx" `
-            /p:PackageCertificatePassword="YourPassword" `
-            /p:DeployOnBuild=true `
-            /p:DeployTargetDevice=RemoteMachine `
-            /p:RemoteDebugMachine="XBOX"
-          Write-Output "Build and packaging completed."
+            /p:PackageCertificatePassword="YourPassword"
+          Write-Output "Build completed."
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
