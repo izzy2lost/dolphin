@@ -43,6 +43,9 @@ jobs:
 
           # Import the certificate to the Trusted Root store
           Import-PfxCertificate -FilePath "mycert.pfx" -CertStoreLocation "Cert:\LocalMachine\Root" -Password $CertPassword
+          
+          # Log the certificate details
+          $cert | Format-List -Property *
         shell: pwsh
 
       - name: Debug Thumbprint
@@ -76,6 +79,8 @@ jobs:
             /p:Platform=$env:Platform `
             /p:AppxPackageSigningEnabled=true `
             /p:PackageCertificateThumbprint=$env:THUMBPRINT `
+            /p:PackageCertificateKeyFile="mycert.pfx" `
+            /p:PackageCertificatePassword="YourPassword" `
             /p:DeployOnBuild=true `
             /p:DeployTargetDevice=RemoteMachine `
             /p:RemoteDebugMachine="XBOX"
