@@ -36,6 +36,13 @@ jobs:
           $cert = New-SelfSignedCertificate -CertStoreLocation "Cert:\CurrentUser\My" -Subject "CN=MyUWPCert" -KeyAlgorithm RSA -KeyLength 2048 -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -KeyExportPolicy Exportable -NotAfter (Get-Date).AddYears(1) -Type CodeSigningCert
           $thumbprint = $cert.Thumbprint -replace ' ', ''  # Remove any spaces
           echo "THUMBPRINT=$thumbprint" >> $env:GITHUB_ENV
+          
+          # Export the certificate to a PFX file
+          $CertPassword = ConvertTo-SecureString -String "YourPassword" -Force -AsPlainText
+          Export-PfxCertificate -Cert "Cert:\CurrentUser\My\$($cert.Thumbprint)" -FilePath "mycert.pfx" -Password $CertPassword
+
+          # Import the certificate to the Trusted Root store
+          Import-PfxCertificate -FilePath "mycert.pfx" -CertStoreLocation "Cert:\LocalMachine\Root" -Password $CertPassword
         shell: pwsh
 
       - name: Debug Thumbprint
