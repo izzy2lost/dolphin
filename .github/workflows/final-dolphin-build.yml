@@ -1,0 +1,58 @@
+name: Dolphin Builder
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        with:
+          submodules: true 
+          fetch-depth: 0 
+
+      - name: Generate Self-Signed Certificate
+        id: cert
+        run: |
+          $cert = New-SelfSignedCertificate -CertStoreLocation "Cert:\CurrentUser\My" -Subject "CN=MyUWPCert" -KeyAlgorithm RSA -KeyLength 2048 -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -KeyExportPolicy Exportable -NotAfter (Get-Date).AddYears(1)
+          $thumbprint = $cert.Thumbprint
+          echo "THUMBPRINT=$thumbprint" >> $GITHUB_ENV
+        shell: pwsh
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet.exe
+        uses: NuGet/setup-nuget@v2
+        with:
+          nuget-version: latest
+      
+      - name: Update Platform Toolset for SDL-UWP
+        shell: pwsh
+        run: |
+          Write-Output "Updating Platform Toolset for SDL-UWP..."
+          $projectPath = "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj"
+          $content = Get-Content $projectPath
+          $newContent = $content -replace 'v142', 'v143'
+          $newContent | Set-Content $projectPath
+          Write-Output "Platform Toolset updated to v143."
+
+      - name: Build and Package Dolphin UWP Project
+        shell: cmd
+        env:
+          THUMBPRINT: ${{ env.THUMBPRINT }}
+        run: |
+          echo Building and packaging the Dolphin UWP project...
+          cd Source
+          echo Current directory: %cd%
+          msbuild dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /t:Restore,Build /p:RestorePackagesConfig=true /p:AppxPackageSigningEnabled=true /p:PackageCertificateThumbprint=%THUMBPRINT% /p:DeployOnBuild=true /p:DeployTargetDevice=RemoteMachine /p:RemoteDebugMachine="XBOX"
+          echo Build and packaging completed.
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dolphin-UWP-Build
+          path: Source/bin/Release
