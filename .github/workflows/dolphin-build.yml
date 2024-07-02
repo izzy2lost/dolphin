@@ -1,7 +1,7 @@
 name: Windows Dolphin Builder
 
 on:
-  workflow_dispatch: # Allows manual dispatch of the workflow
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -11,8 +11,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
         with:
-          submodules: true # Ensures submodules are checked out
-          fetch-depth: 0 # Ensures the full repository is checked out
+          submodules: true 
+          fetch-depth: 0 
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -21,20 +21,7 @@ jobs:
         uses: NuGet/setup-nuget@v2
         with:
           nuget-version: latest
-
-      - name: Verify SDL-UWP.vcxproj file exists
-        shell: pwsh
-        run: |
-          Write-Output "Verifying SDL-UWP.vcxproj file..."
-          $projectPath = "Externals/SDL/SDL/VisualC-WinRT/SDL-UWP.vcxproj"
-          if (-Not (Test-Path $projectPath)) {
-            Write-Error "SDL-UWP.vcxproj not found at $projectPath!"
-            exit 1
-          }
-          Write-Output "SDL-UWP.vcxproj found at $projectPath."
-          Get-Location
-          Get-ChildItem (Split-Path $projectPath)
-
+      
       - name: Update Platform Toolset for SDL-UWP
         shell: pwsh
         run: |
@@ -44,38 +31,6 @@ jobs:
           $newContent = $content -replace 'v142', 'v143'
           $newContent | Set-Content $projectPath
           Write-Output "Platform Toolset updated to v143."
-
-      - name: Verify and Update Solution Configuration
-        shell: pwsh
-        run: |
-          Write-Output "Verifying solution configuration..."
-          $solutionPath = "Source/dolphin-emu.sln"
-          if (-Not (Test-Path $solutionPath)) {
-            Write-Error "Solution file not found at $solutionPath!"
-            exit 1
-          }
-          $solutionContent = Get-Content $solutionPath
-          $projectGUID = "{89E9B32E-A86A-47C3-A948-D2B1622925CE}"
-          $configSection = @"
-          $projectGUID.Release|x64.ActiveCfg = Release|x64
-          $projectGUID.Release|x64.Build.0 = Release|x64
-          "@
-          if ($solutionContent -notcontains $configSection) {
-            Write-Output "Adding SDL-UWP project configuration to the solution..."
-            $newSolutionContent = $solutionContent -replace '(GlobalSection\(ProjectConfigurationPlatforms\) = postSolution)', "`$1`n$configSection"
-            $newSolutionContent | Set-Content $solutionPath
-            Write-Output "SDL-UWP project configuration added."
-          } else {
-            Write-Output "SDL-UWP project configuration already present."
-          }
-
-      - name: Print Solution Configuration
-        shell: pwsh
-        run: |
-          Write-Output "Printing solution configuration..."
-          $solutionPath = "Source/dolphin-emu.sln"
-          $solutionContent = Get-Content $solutionPath
-          Write-Output $solutionContent
 
       - name: Build and Package Dolphin UWP Project
         shell: cmd
