@@ -1,4 +1,4 @@
-name: Just Build it!
+name: 4 the love of God
 
 on:
   workflow_dispatch:
@@ -48,11 +48,9 @@ jobs:
           Write-Output "Platform Toolset updated to v143."
 
       - name: Restore NuGet Packages
-        shell: pwsh
         run: |
-          Write-Output "Restoring NuGet packages..."
-          msbuild $env:SolutionPath /t:Restore
-          Write-Output "NuGet packages restored."
+          nuget restore $env:SolutionPath
+        shell: pwsh
 
       - name: Build and Package Dolphin UWP Project
         shell: pwsh
