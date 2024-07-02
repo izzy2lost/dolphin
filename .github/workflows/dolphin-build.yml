@@ -1,7 +1,7 @@
-name: Windows Dolphin Builder
+name: Build
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,6 +13,17 @@ jobs:
         with:
           submodules: true 
           fetch-depth: 0 
+
+      - name: Generate Self-Signed Certificate
+        id: cert
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -CertStoreLocation "Cert:\CurrentUser\My" -Subject "CN=MyUWPCert" -KeyAlgorithm RSA -KeyLength 2048 -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -KeyExportPolicy Exportable -NotAfter (Get-Date).AddYears(1)
+          $thumbprint = $cert.Thumbprint
+          $certPath = "$env:USERPROFILE\MyUWPCert.pfx"
+          Export-PfxCertificate -Cert $cert -FilePath $certPath -Password (ConvertTo-SecureString -String "password" -Force -AsPlainText)
+          echo "THUMBPRINT=$thumbprint" >> $GITHUB_ENV
+          echo "CERTPATH=$certPath" >> $GITHUB_ENV
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v2
@@ -34,15 +45,18 @@ jobs:
 
       - name: Build and Package Dolphin UWP Project
         shell: cmd
+        env:
+          THUMBPRINT: ${{ env.THUMBPRINT }}
+          CERTPATH: ${{ env.CERTPATH }}
         run: |
           echo Building and packaging the Dolphin UWP project...
           cd Source
           echo Current directory: %cd%
-          msbuild dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /t:Restore,Build /p:RestorePackagesConfig=true /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile="DolphinWinRT_TemporaryKey.pfx" /p:DeployOnBuild=true /p:DeployTargetDevice=RemoteMachine /p:RemoteDebugMachine="XBOX"
+          msbuild dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /t:Restore,Build /p:RestorePackagesConfig=true /p:AppxPackageSigningEnabled=true /p:PackageCertificateKeyFile="%CERTPATH%" /p:PackageCertificatePassword=password /p:AppxPackageSigningEnabled=true /p:AppxPackageSigningCertificateThumbprint=%THUMBPRINT% /p:DeployOnBuild=true /p:DeployTargetDevice=RemoteMachine /p:RemoteDebugMachine="XBOX"
           echo Build and packaging completed.
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Dolphin-UWP-Build
           path: Source/bin/Release
