@@ -1,4 +1,4 @@
-name: Builder
+name: Please Build
 
 on:
   workflow_dispatch:
@@ -47,6 +47,13 @@ jobs:
           $newContent | Set-Content $projectPath
           Write-Output "Platform Toolset updated to v143."
 
+      - name: Restore NuGet Packages
+        shell: pwsh
+        run: |
+          Write-Output "Restoring NuGet packages..."
+          msbuild $env:SolutionPath /t:Restore
+          Write-Output "NuGet packages restored."
+
       - name: Build and Package Dolphin UWP Project
         shell: pwsh
         env:
@@ -58,8 +65,6 @@ jobs:
           msbuild $env:SolutionPath `
             /p:Configuration=$env:Configuration `
             /p:Platform=$env:Platform `
-            /t:Restore,Build `
-            /p:RestorePackagesConfig=true `
             /p:AppxPackageSigningEnabled=true `
             /p:PackageCertificateThumbprint=$env:THUMBPRINT `
             /p:DeployOnBuild=true `
